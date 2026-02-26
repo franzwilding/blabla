@@ -39,6 +39,9 @@
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>YapBar uses on-device speech recognition to transcribe audio.</string>
 
+    <key>NSAccessibilityUsageDescription</key>
+    <string>YapBar uses Accessibility to detect the Fn key globally for push-to-talk and toggle recording.</string>
+
     <!-- High-resolution display support -->
     <key>NSHighResolutionCapable</key>
     <true/>

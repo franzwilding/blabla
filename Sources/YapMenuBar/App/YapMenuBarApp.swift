@@ -8,7 +8,6 @@ struct YapMenuBarApp: App {
         MenuBarExtra {
             MenuBarContentView()
                 .environmentObject(appState)
-                .frame(width: 400)
         } label: {
             MenuBarLabel(isCapturing: appState.isCapturing, mode: appState.captureMode)
         }
@@ -17,7 +16,7 @@ struct YapMenuBarApp: App {
         Settings {
             SettingsView()
                 .environmentObject(appState)
-                .frame(width: 480, height: 320)
+                .frame(width: 480, height: 420)
         }
     }
 }

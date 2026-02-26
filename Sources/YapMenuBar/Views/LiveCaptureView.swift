@@ -42,24 +42,42 @@ struct LiveCaptureView: View {
 
     private var modeSelector: some View {
         HStack(spacing: 8) {
-            ForEach(CaptureMode.allCases, id: \.self) { mode in
-                Button {
-                    if !appState.isCapturing { selectedMode = mode }
-                } label: {
-                    Label(mode.rawValue, systemImage: mode.icon)
-                        .font(.caption)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(selectedMode == mode ? Color.accentColor : Color.secondary.opacity(0.12))
-                        .foregroundStyle(selectedMode == mode ? .white : .primary)
-                        .clipShape(Capsule())
+            if appState.hotkeyService.hotkeyState != .idle {
+                hotkeyBadge
+            } else {
+                ForEach(CaptureMode.allCases, id: \.self) { mode in
+                    Button {
+                        if !appState.isCapturing { selectedMode = mode }
+                    } label: {
+                        Label(mode.rawValue, systemImage: mode.icon)
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(selectedMode == mode ? Color.accentColor : Color.secondary.opacity(0.12))
+                            .foregroundStyle(selectedMode == mode ? .white : .primary)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(appState.isCapturing && selectedMode != mode)
                 }
-                .buttonStyle(.plain)
-                .disabled(appState.isCapturing && selectedMode != mode)
             }
             Spacer()
             startStopButton
         }
+    }
+
+    private var hotkeyBadge: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "keyboard")
+                .font(.caption2)
+            Text(appState.hotkeyService.hotkeyState == .activeUndecided ? "Fn Hold" : "Fn Toggle")
+                .font(.caption.bold())
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color.orange)
+        .foregroundStyle(.white)
+        .clipShape(Capsule())
     }
 
     private var startStopButton: some View {

@@ -1,3 +1,4 @@
+import AppKit
 import Speech
 import SwiftUI
 
@@ -45,6 +46,59 @@ struct SettingsView: View {
             // ── Content ───────────────────────────────────────────────────────
             Section("Content") {
                 Toggle("Censor sensitive words", isOn: $appState.censorContent)
+            }
+
+            // ── Aufnahmen ────────────────────────────────────────────────────
+            Section("Aufnahmen") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if appState.defaultFolderPath.isEmpty {
+                            Text("Kein Ordner ausgewählt")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(URL(fileURLWithPath: appState.defaultFolderPath).lastPathComponent)
+                            Text(appState.defaultFolderPath)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                    Spacer()
+                    if !appState.defaultFolderPath.isEmpty {
+                        Button {
+                            appState.defaultFolderPath = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Button("Ausw\u{00E4}hlen\u{2026}") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseFiles = false
+                        panel.canChooseDirectories = true
+                        panel.canCreateDirectories = true
+                        panel.prompt = "Ordner ausw\u{00E4}hlen"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            appState.defaultFolderPath = url.path
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                Text("Text- und Audiodateien werden live in diesen Ordner geschrieben. Bei einem Absturz bleiben die bisherigen Daten erhalten.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            // ── Global Hotkey ─────────────────────────────────────────────────
+            Section("Global Hotkey") {
+                Toggle("Enable Fn key hotkey", isOn: $appState.hotkeyEnabled)
+
+                Text("Hold Fn for push-to-talk (both sources). Tap Fn to toggle recording with speaker labels. Tap again to stop.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             // ── Permissions ───────────────────────────────────────────────────

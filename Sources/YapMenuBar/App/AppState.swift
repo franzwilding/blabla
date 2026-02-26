@@ -40,6 +40,18 @@ final class AppState: ObservableObject {
     @Published var wordTimestamps: Bool {
         didSet { UserDefaults.standard.set(wordTimestamps, forKey: "wordTimestamps") }
     }
+    @Published var hotkeyEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(hotkeyEnabled, forKey: "hotkeyEnabled")
+            if hotkeyEnabled { hotkeyService.enable() } else { hotkeyService.disable() }
+        }
+    }
+    @Published var defaultFolderPath: String {
+        didSet { UserDefaults.standard.set(defaultFolderPath, forKey: "defaultFolderPath") }
+    }
+
+    /// When true, prefix `[System]` / `[Mic]` labels in the combined transcript.
+    @Published var labelSources: Bool = false
 
     // MARK: Computed settings
 
@@ -57,10 +69,20 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: Computed — default folder
+
+    var defaultFolderURL: URL? {
+        guard !defaultFolderPath.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: defaultFolderPath, isDirectory: true)
+        return FileManager.default.isWritableFile(atPath: url.path) ? url : nil
+    }
+
     // MARK: - Services
 
     let listenService = ListenService()
     let dictateService = DictateService()
+    let hotkeyService = GlobalHotkeyService()
+    private var sessionRecorder: SessionRecorder?
 
     // MARK: - Transcript history
 
@@ -77,14 +99,22 @@ final class AppState: ObservableObject {
         outputFormatRaw          = defaults.string(forKey: "outputFormat") ?? OutputFormat.txt.rawValue
         maxSentenceLength        = defaults.integer(forKey: "maxSentenceLength").nonzero(default: 40)
         wordTimestamps           = defaults.bool(forKey: "wordTimestamps")
+        // Default to enabled; UserDefaults.bool returns false for missing keys
+        hotkeyEnabled            = defaults.object(forKey: "hotkeyEnabled") == nil
+                                     ? true
+                                     : defaults.bool(forKey: "hotkeyEnabled")
+        defaultFolderPath        = defaults.string(forKey: "defaultFolderPath") ?? ""
         loadHistory()
         observeServices()
+        setupHotkeyService()
     }
 
     // MARK: - Capture actions
 
     func startListening() async {
         guard captureMode == .idle else { return }
+        hotkeyService.resetToIdle()
+        liveText = ""
         clearError()
         do {
             try await listenService.start(locale: selectedLocale, censor: censorContent)
@@ -96,6 +126,8 @@ final class AppState: ObservableObject {
 
     func startDictating() async {
         guard captureMode == .idle else { return }
+        hotkeyService.resetToIdle()
+        liveText = ""
         clearError()
         do {
             try await dictateService.start(locale: selectedLocale, censor: censorContent)
@@ -105,29 +137,41 @@ final class AppState: ObservableObject {
         }
     }
 
-    func startBoth() async {
+    func startBoth(mode: String = "Diktat") async {
         guard captureMode == .idle else { return }
+        liveText = ""
+        labelSources = false
         clearError()
         do {
+            startSessionRecording(mode: mode)
             try await listenService.start(locale: selectedLocale, censor: censorContent)
             try await dictateService.start(locale: selectedLocale, censor: censorContent)
             captureMode = .both
         } catch {
             errorMessage = error.localizedDescription
+            stopSessionRecording()
             try? await listenService.stop()
         }
     }
 
     func stopCapture() async {
-        defer { captureMode = .idle }
-        let combinedText = liveText
-        if !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            archiveTranscript(combinedText, source: captureMode.label)
-        }
-        liveText = ""
+        let source = captureMode.label
+        captureMode = .idle
+        labelSources = false
+        hotkeyService.resetToIdle()
+
+        // Stop services — waits for all results to be fully processed
         async let l: () = (try? listenService.stop()) ?? ()
         async let d: () = (try? dictateService.stop()) ?? ()
         _ = await (l, d)
+
+        stopSessionRecording()
+
+        // Archive AFTER services have produced all results
+        let combinedText = liveText
+        if !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            archiveTranscript(combinedText, source: source)
+        }
     }
 
     // MARK: - File transcription
@@ -171,10 +215,49 @@ final class AppState: ObservableObject {
             .combineLatest(dictateService.$liveFragment)
             .receive(on: RunLoop.main)
             .sink { [weak self] listenFrag, dictateFrag in
-                let parts = [listenFrag, dictateFrag].filter { !$0.isEmpty }
-                self?.liveText = parts.joined(separator: " ")
+                guard let self else { return }
+                var parts: [String] = []
+                if !listenFrag.isEmpty {
+                    parts.append(self.labelSources ? "[System] \(listenFrag)" : listenFrag)
+                }
+                if !dictateFrag.isEmpty {
+                    parts.append(self.labelSources ? "[Mic] \(dictateFrag)" : dictateFrag)
+                }
+                guard !parts.isEmpty else { return }
+                self.liveText = parts.joined(separator: "\n")
+                self.sessionRecorder?.writeText(self.liveText)
             }
             .store(in: &cancellables)
+    }
+
+    private func setupHotkeyService() {
+        hotkeyService.onStartBoth = { [weak self] in
+            await self?.startBoth()
+        }
+        hotkeyService.onStopCapture = { [weak self] in
+            await self?.stopCapture()
+        }
+        hotkeyService.onEnableSpeakerLabels = { [weak self] in
+            self?.labelSources = true
+        }
+        if hotkeyEnabled { hotkeyService.enable() }
+    }
+
+    private func startSessionRecording(mode: String) {
+        guard let folder = defaultFolderURL else { return }
+        guard let recorder = try? SessionRecorder(folder: folder, mode: mode) else { return }
+        sessionRecorder = recorder
+        listenService.onAudioBuffer = { [recorder] buffer in
+            recorder.writeAudio(buffer: buffer, source: .system)
+        }
+        dictateService.onAudioBuffer = { [recorder] buffer in
+            recorder.writeAudio(buffer: buffer, source: .mic)
+        }
+    }
+
+    private func stopSessionRecording() {
+        sessionRecorder?.finalize()
+        sessionRecorder = nil
     }
 
     private func archiveTranscript(_ text: String, source: String) {

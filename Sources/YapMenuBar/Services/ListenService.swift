@@ -18,6 +18,9 @@ final class ListenService: ObservableObject {
     @Published var state: State = .idle
     @Published var liveFragment: String = ""
 
+    /// Called with the raw source-format PCM buffer for each audio chunk (before conversion).
+    var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
+
     private var captureStream: SCStream?
     private var analyzer: SpeechAnalyzer?
     private var transcriber: SpeechTranscriber?
@@ -47,7 +50,7 @@ final class ListenService: ObservableObject {
         let speechTranscriber = SpeechTranscriber(
             locale: locale,
             transcriptionOptions: censor ? [.etiquetteReplacements] : [],
-            reportingOptions: [],
+            reportingOptions: [.volatileResults, .fastResults],
             attributeOptions: [.audioTimeRange]
         )
         let modules: [any SpeechModule] = [speechTranscriber]
@@ -92,6 +95,7 @@ final class ListenService: ObservableObject {
         cfg.minimumFrameInterval     = CMTime(value: 1, timescale: 1)
 
         let delegate = AudioCaptureDelegate(targetFormat: targetFormat, continuation: continuation)
+        delegate.onSourceBuffer = self.onAudioBuffer
         let filter   = SCContentFilter(display: display, excludingWindows: [])
         let stream   = SCStream(filter: filter, configuration: cfg, delegate: nil)
         try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: .global())
@@ -113,12 +117,29 @@ final class ListenService: ObservableObject {
         state       = .running
 
         resultsTask = Task { [weak self] in
+            // Track segments by start time to handle volatile→finalized transitions
+            // without duplication. Volatile results update in-place, finalized results
+            // replace their volatile predecessor for the same time range.
+            var segments: [(start: CMTime, text: String)] = []
+
             do {
                 guard let transcriber = self?.transcriber else { return }
                 for try await result in transcriber.results {
                     let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { continue }
-                    await MainActor.run { self?.liveFragment = text }
+
+                    let start = result.range.start
+                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.start, start) == 0 }) {
+                        segments[idx].text = text
+                    } else {
+                        segments.append((start, text))
+                    }
+
+                    let display = segments.map(\.text).joined(separator: " ")
+                    await MainActor.run {
+                        guard let self else { return }
+                        self.liveFragment = display
+                    }
                 }
             } catch {
                 // Stream ended (normal on stop or error)
@@ -138,11 +159,13 @@ final class ListenService: ObservableObject {
         try? await captureStream?.stopCapture()
         inputContinuation?.finish()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
-        resultsTask?.cancel()
+        // Wait for the results task to finish processing (don't cancel it)
+        await resultsTask?.value
         captureStream     = nil
         analyzer          = nil
         transcriber       = nil
         inputContinuation = nil
+        onAudioBuffer     = nil
         state             = .idle
     }
 }
@@ -155,6 +178,7 @@ private final class AudioCaptureDelegate: NSObject, SCStreamOutput, @unchecked S
     let targetFormat: AVAudioFormat
     let continuation: AsyncStream<AnalyzerInput>.Continuation
     var converter: AVAudioConverter?
+    var onSourceBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
 
     init(targetFormat: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation) {
         self.targetFormat = targetFormat
@@ -181,6 +205,7 @@ private final class AudioCaptureDelegate: NSObject, SCStreamOutput, @unchecked S
         do {
             try sampleBuffer.withAudioBufferList { abl, _ in
                 guard let source = AVAudioPCMBuffer(pcmFormat: sourceFormat, bufferListNoCopy: abl.unsafePointer) else { return }
+                onSourceBuffer?(source)
                 let capacity = AVAudioFrameCount(ceil(Double(source.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate))
                 guard let converted = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
 

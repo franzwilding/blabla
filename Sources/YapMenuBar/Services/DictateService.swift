@@ -4,6 +4,7 @@
 
 @preconcurrency import AVFoundation
 import Combine
+import CoreMedia
 import Speech
 
 // MARK: - DictateService
@@ -15,6 +16,9 @@ final class DictateService: ObservableObject {
 
     @Published var state: State = .idle
     @Published var liveFragment: String = ""
+
+    /// Called with the raw source-format PCM buffer for each mic chunk (before conversion).
+    var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
 
     private var micCapture: MicCapture?
     private var analyzer: SpeechAnalyzer?
@@ -51,7 +55,7 @@ final class DictateService: ObservableObject {
         let speechTranscriber = SpeechTranscriber(
             locale: locale,
             transcriptionOptions: censor ? [.etiquetteReplacements] : [],
-            reportingOptions: [],
+            reportingOptions: [.volatileResults, .fastResults],
             attributeOptions: [.audioTimeRange]
         )
         let modules: [any SpeechModule] = [speechTranscriber]
@@ -73,6 +77,7 @@ final class DictateService: ObservableObject {
 
         // Set up microphone capture (mirrors yap's MicrophoneCapture)
         let capture = try MicCapture(targetFormat: targetFormat, continuation: continuation)
+        capture.onSourceBuffer = self.onAudioBuffer
         micCapture = capture
         try capture.start()
 
@@ -83,12 +88,26 @@ final class DictateService: ObservableObject {
         state       = .running
 
         resultsTask = Task { [weak self] in
+            var segments: [(start: CMTime, text: String)] = []
+
             do {
                 guard let transcriber = self?.transcriber else { return }
                 for try await result in transcriber.results {
                     let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { continue }
-                    await MainActor.run { self?.liveFragment = text }
+
+                    let start = result.range.start
+                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.start, start) == 0 }) {
+                        segments[idx].text = text
+                    } else {
+                        segments.append((start, text))
+                    }
+
+                    let display = segments.map(\.text).joined(separator: " ")
+                    await MainActor.run {
+                        guard let self else { return }
+                        self.liveFragment = display
+                    }
                 }
             } catch {
                 // Stream ended (normal on stop or error)
@@ -107,11 +126,13 @@ final class DictateService: ObservableObject {
         state = .stopping
         micCapture?.stop()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
-        resultsTask?.cancel()
-        micCapture  = nil
-        analyzer    = nil
-        transcriber = nil
-        state       = .idle
+        // Wait for the results task to finish processing (don't cancel it)
+        await resultsTask?.value
+        micCapture    = nil
+        analyzer      = nil
+        transcriber   = nil
+        onAudioBuffer = nil
+        state         = .idle
     }
 }
 
@@ -123,6 +144,7 @@ private final class MicCapture: @unchecked Sendable {
     private let engine: AVAudioEngine
     private let continuation: AsyncStream<AnalyzerInput>.Continuation
     private let targetFormat: AVAudioFormat
+    var onSourceBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
 
     init(targetFormat: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation) throws {
         self.targetFormat = targetFormat
@@ -146,6 +168,7 @@ private final class MicCapture: @unchecked Sendable {
     }
 
     private func handleBuffer(_ buffer: AVAudioPCMBuffer) {
+        onSourceBuffer?(buffer)
         let sourceFormat = buffer.format
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else { return }
         let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate))
