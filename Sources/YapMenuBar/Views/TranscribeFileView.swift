@@ -77,9 +77,9 @@ struct TranscribeFileView: View {
                         Task { await transcribe(url) }
                     } label: {
                         if appState.isTranscribingFile {
-                            Label("Transcribing…", systemImage: "ellipsis")
+                            Label(String(localized: "Transcribing…", bundle: .module), systemImage: "ellipsis")
                         } else {
-                            Label("Transcribe", systemImage: "waveform")
+                            Label(String(localized: "Transcribe", bundle: .module), systemImage: "waveform")
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -89,10 +89,10 @@ struct TranscribeFileView: View {
                     Image(systemName: "arrow.down.doc.fill")
                         .font(.title)
                         .foregroundStyle(.tertiary)
-                    Text("Drop an audio or video file")
+                    Text(String(localized: "Drop an audio or video file", bundle: .module))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Button("Choose File…") { openFilePicker() }
+                    Button(String(localized: "Choose File…", bundle: .module)) { openFilePicker() }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
@@ -121,7 +121,7 @@ struct TranscribeFileView: View {
             if appState.isTranscribingFile {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Transcribing…")
+                    Text(String(localized: "Transcribing…", bundle: .module))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -149,7 +149,7 @@ struct TranscribeFileView: View {
                     Button {
                         appState.copyToClipboard(result)
                     } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
+                        Label(String(localized: "Copy", bundle: .module), systemImage: "doc.on.doc")
                             .font(.caption)
                     }
                     .buttonStyle(.bordered)
@@ -157,7 +157,7 @@ struct TranscribeFileView: View {
 
                     Spacer()
 
-                    Text("\(result.count) chars")
+                    Text(String(localized: "\(result.count) chars", bundle: .module))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -169,7 +169,7 @@ struct TranscribeFileView: View {
 
     private func openFilePicker() {
         let panel = NSOpenPanel()
-        panel.title = "Choose audio or video file"
+        panel.title = String(localized: "Choose audio or video file", bundle: .module)
         panel.allowedContentTypes = Self.supportedTypes
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {

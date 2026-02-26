@@ -14,9 +14,10 @@ import PackageDescription
 
 let package = Package(
     name: "YapMenuBar",
+    defaultLocalization: "en",
     platforms: [.macOS(.v26)],
     products: [
-        .executable(name: "YapMenuBar", targets: ["YapMenuBar"]),
+        .executable(name: "Blabla", targets: ["YapMenuBar"]),
     ],
     dependencies: [
         // Required because yap/Sources/yap/OutputFormat.swift conforms to
@@ -41,6 +42,8 @@ let package = Package(
             ],
             resources: [
                 .process("Resources/Assets.xcassets"),
+                .process("Resources/en.lproj"),
+                .process("Resources/de.lproj"),
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v6),

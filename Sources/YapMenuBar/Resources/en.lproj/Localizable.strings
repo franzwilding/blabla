@@ -1,0 +1,71 @@
+/* Settings Tabs */
+"General" = "General";
+"Dictation" = "Dictation";
+"Transcription" = "Transcription";
+
+/* General Tab */
+"Language" = "Language";
+"Transcription language" = "Transcription language";
+"Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices." = "Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices.";
+"Content" = "Content";
+"Censor sensitive words" = "Censor sensitive words";
+"Hotkey" = "Hotkey";
+"Press a modifier key…" = "Press a modifier key…";
+"Permissions" = "Permissions";
+"Microphone" = "Microphone";
+"Screen Recording" = "Screen Recording";
+"Accessibility" = "Accessibility";
+"Open Privacy Settings" = "Open Privacy Settings";
+"About" = "About";
+"Core transcription engine" = "Core transcription engine";
+"Version" = "Version";
+
+/* Dictation Tab */
+"Automatic punctuation" = "Automatic punctuation";
+"Hold the hotkey for push-to-talk. Dictation inserts the transcribed text at the current cursor position." = "Hold the hotkey for push-to-talk. Dictation inserts the transcribed text at the current cursor position.";
+
+/* Transcription Tab */
+"Output Format" = "Output Format";
+"Format" = "Format";
+"Max sentence length: %lld chars" = "Max sentence length: %lld chars";
+"Word-level timestamps (JSON only)" = "Word-level timestamps (JSON only)";
+"Recording Folder" = "Recording Folder";
+"(Default)" = "(Default)";
+"Choose…" = "Choose…";
+"Choose folder" = "Choose folder";
+"Text and audio files are written live to this folder. In case of a crash, existing data is preserved." = "Text and audio files are written live to this folder. In case of a crash, existing data is preserved.";
+"Tap the hotkey to toggle transcription with speaker labels. Tap again to stop." = "Tap the hotkey to toggle transcription with speaker labels. Tap again to stop.";
+
+/* Menu Bar */
+"Stop Dictation" = "Stop Dictation";
+"Start Transcript" = "Start Transcript";
+"Stop Transcript" = "Stop Transcript";
+"Settings" = "Settings";
+"Quit" = "Quit";
+
+/* Live Capture */
+"System Audio" = "System Audio";
+"Both" = "Both";
+"%@ Hold" = "%@ Hold";
+"%@ Toggle" = "%@ Toggle";
+"Stop" = "Stop";
+"Start" = "Start";
+"Select a mode and press Start" = "Select a mode and press Start";
+"Copy" = "Copy";
+"Clear" = "Clear";
+"%lld chars" = "%lld chars";
+
+/* Transcribe File */
+"Transcribing…" = "Transcribing…";
+"Transcribe" = "Transcribe";
+"Drop an audio or video file" = "Drop an audio or video file";
+"Choose File…" = "Choose File…";
+"Choose audio or video file" = "Choose audio or video file";
+
+/* History */
+"Search transcripts…" = "Search transcripts…";
+"Delete" = "Delete";
+"No transcripts yet" = "No transcripts yet";
+"No results" = "No results";
+"%lld transcripts" = "%lld transcripts";
+"Clear All" = "Clear All";

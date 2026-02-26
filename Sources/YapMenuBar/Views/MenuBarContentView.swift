@@ -15,10 +15,12 @@ struct MenuBarContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // ── Diktieren (≡ Fn hold) ──
+            // ── Diktieren (≡ modifier hold) ──
             MenuRow(
-                title: isDictating ? "Diktieren beenden" : "Diktieren",
-                shortcut: "fn HOLD",
+                title: isDictating
+                    ? String(localized: "Stop Dictation", bundle: .module)
+                    : String(localized: "Dictation", bundle: .module),
+                shortcut: "\(appState.hotkeyKey.displayName) HOLD",
                 isDisabled: isTranscribing
             ) {
                 dismissPopover()
@@ -31,10 +33,12 @@ struct MenuBarContentView: View {
                 }
             }
 
-            // ── Transkript (≡ Fn tap/toggle) ──
+            // ── Transkript (≡ modifier tap/toggle) ──
             MenuRow(
-                title: isTranscribing ? "Transkript beenden" : "Transkript starten",
-                shortcut: "fn PRESS",
+                title: isTranscribing
+                    ? String(localized: "Stop Transcript", bundle: .module)
+                    : String(localized: "Start Transcript", bundle: .module),
+                shortcut: "\(appState.hotkeyKey.displayName) PRESS",
                 isDisabled: isDictating
             ) {
                 dismissPopover()
@@ -42,7 +46,7 @@ struct MenuBarContentView: View {
                     if isTranscribing {
                         await appState.stopCapture()
                     } else if !appState.isCapturing {
-                        await appState.startBoth(mode: "Transkript")
+                        await appState.startBoth()
                         appState.labelSources = true
                     }
                 }
@@ -52,13 +56,16 @@ struct MenuBarContentView: View {
                 .padding(.vertical, 4)
 
             // ── Einstellungen ──
-            MenuRow(title: "Einstellungen", icon: "gearshape", shortcut: "⌘,") {
+            SettingsMenuRow(shortcut: "⌘,") {
                 dismissPopover()
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
 
             // ── Beenden ──
-            MenuRow(title: "Beenden", icon: "power", shortcut: "⌘Q") {
+            MenuRow(
+                title: String(localized: "Quit", bundle: .module),
+                icon: "power",
+                shortcut: "⌘Q"
+            ) {
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -113,5 +120,44 @@ private struct MenuRow: View {
         .opacity(isDisabled ? 0.35 : 1)
         .onHover { isHovered = $0 }
         .padding(.horizontal, 5)
+    }
+}
+
+// MARK: - SettingsMenuRow
+
+private struct SettingsMenuRow: View {
+    var shortcut: String? = nil
+    var onOpen: (() -> Void)? = nil
+
+    @State private var isHovered = false
+
+    var body: some View {
+        SettingsLink {
+            HStack(spacing: 0) {
+                Image(systemName: "gearshape")
+                    .frame(width: 20)
+
+                Text(String(localized: "Settings", bundle: .module))
+
+                Spacer(minLength: 16)
+
+                if let shortcut {
+                    Text(shortcut)
+                        .foregroundStyle(isHovered ? .white.opacity(0.7) : .secondary)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isHovered ? Color.accentColor : .clear)
+            )
+            .foregroundStyle(isHovered ? .white : .primary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .padding(.horizontal, 5)
+        .simultaneousGesture(TapGesture().onEnded { onOpen?() })
     }
 }

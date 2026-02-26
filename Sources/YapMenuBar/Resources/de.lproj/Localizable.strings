@@ -1,0 +1,71 @@
+/* Settings Tabs */
+"General" = "Allgemein";
+"Dictation" = "Diktieren";
+"Transcription" = "Transkription";
+
+/* General Tab */
+"Language" = "Sprache";
+"Transcription language" = "Transkriptionssprache";
+"Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices." = "Sprachen müssen vom System heruntergeladen werden. Öffne Systemeinstellungen → Bedienungshilfen → Live-Sprache, um installierte Stimmen zu verwalten.";
+"Content" = "Inhalt";
+"Censor sensitive words" = "Sensible Wörter zensieren";
+"Hotkey" = "Hotkey";
+"Press a modifier key…" = "Modifier-Taste drücken…";
+"Permissions" = "Berechtigungen";
+"Microphone" = "Mikrofon";
+"Screen Recording" = "Bildschirmaufnahme";
+"Accessibility" = "Bedienungshilfen";
+"Open Privacy Settings" = "Datenschutz öffnen";
+"About" = "Über";
+"Core transcription engine" = "Transkriptions-Engine";
+"Version" = "Version";
+
+/* Dictation Tab */
+"Automatic punctuation" = "Automatische Interpunktion";
+"Hold the hotkey for push-to-talk. Dictation inserts the transcribed text at the current cursor position." = "Halte den Hotkey gedrückt zum Diktieren. Der transkribierte Text wird an der aktuellen Cursorposition eingefügt.";
+
+/* Transcription Tab */
+"Output Format" = "Ausgabeformat";
+"Format" = "Format";
+"Max sentence length: %lld chars" = "Max. Satzlänge: %lld Zeichen";
+"Word-level timestamps (JSON only)" = "Wort-Zeitstempel (nur JSON)";
+"Recording Folder" = "Aufnahmeordner";
+"(Default)" = "(Standard)";
+"Choose…" = "Auswählen…";
+"Choose folder" = "Ordner auswählen";
+"Text and audio files are written live to this folder. In case of a crash, existing data is preserved." = "Text- und Audiodateien werden live in diesen Ordner geschrieben. Bei einem Absturz bleiben die bisherigen Daten erhalten.";
+"Tap the hotkey to toggle transcription with speaker labels. Tap again to stop." = "Drücke den Hotkey, um die Transkription mit Sprecherbeschriftung zu starten. Erneut drücken zum Beenden.";
+
+/* Menu Bar */
+"Stop Dictation" = "Diktieren beenden";
+"Start Transcript" = "Transkript starten";
+"Stop Transcript" = "Transkript beenden";
+"Settings" = "Einstellungen";
+"Quit" = "Beenden";
+
+/* Live Capture */
+"System Audio" = "Systemaudio";
+"Both" = "Beide";
+"%@ Hold" = "%@ Halten";
+"%@ Toggle" = "%@ Umschalten";
+"Stop" = "Stopp";
+"Start" = "Start";
+"Select a mode and press Start" = "Wähle einen Modus und drücke Start";
+"Copy" = "Kopieren";
+"Clear" = "Löschen";
+"%lld chars" = "%lld Zeichen";
+
+/* Transcribe File */
+"Transcribing…" = "Transkribieren…";
+"Transcribe" = "Transkribieren";
+"Drop an audio or video file" = "Audio- oder Videodatei hierhin ziehen";
+"Choose File…" = "Datei auswählen…";
+"Choose audio or video file" = "Audio- oder Videodatei auswählen";
+
+/* History */
+"Search transcripts…" = "Transkripte durchsuchen…";
+"Delete" = "Löschen";
+"No transcripts yet" = "Noch keine Transkripte";
+"No results" = "Keine Ergebnisse";
+"%lld transcripts" = "%lld Transkripte";
+"Clear All" = "Alle löschen";

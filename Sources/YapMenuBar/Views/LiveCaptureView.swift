@@ -26,10 +26,18 @@ struct LiveCaptureView: View {
 
     @State private var selectedMode: CaptureMode = .listen
 
-    enum CaptureMode: String, CaseIterable {
-        case listen  = "System Audio"
-        case dictate = "Microphone"
-        case both    = "Both"
+    enum CaptureMode: CaseIterable {
+        case listen
+        case dictate
+        case both
+
+        var label: String {
+            switch self {
+            case .listen:  return String(localized: "System Audio", bundle: .module)
+            case .dictate: return String(localized: "Microphone", bundle: .module)
+            case .both:    return String(localized: "Both", bundle: .module)
+            }
+        }
 
         var icon: String {
             switch self {
@@ -49,7 +57,7 @@ struct LiveCaptureView: View {
                     Button {
                         if !appState.isCapturing { selectedMode = mode }
                     } label: {
-                        Label(mode.rawValue, systemImage: mode.icon)
+                        Label(mode.label, systemImage: mode.icon)
                             .font(.caption)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
@@ -70,7 +78,9 @@ struct LiveCaptureView: View {
         HStack(spacing: 5) {
             Image(systemName: "keyboard")
                 .font(.caption2)
-            Text(appState.hotkeyService.hotkeyState == .activeUndecided ? "Fn Hold" : "Fn Toggle")
+            Text(appState.hotkeyService.hotkeyState == .activeUndecided
+                 ? String(localized: "\(appState.hotkeyKey.displayName) Hold", bundle: .module)
+                 : String(localized: "\(appState.hotkeyKey.displayName) Toggle", bundle: .module))
                 .font(.caption.bold())
         }
         .padding(.horizontal, 10)
@@ -95,7 +105,9 @@ struct LiveCaptureView: View {
             }
         } label: {
             Label(
-                appState.isCapturing ? "Stop" : "Start",
+                appState.isCapturing
+                    ? String(localized: "Stop", bundle: .module)
+                    : String(localized: "Start", bundle: .module),
                 systemImage: appState.isCapturing ? "stop.fill" : "play.fill"
             )
             .font(.caption.bold())
@@ -128,7 +140,6 @@ struct LiveCaptureView: View {
                             .id("transcript")
 
                         if appState.isCapturing {
-                            // Blinking cursor to indicate active recording
                             HStack(spacing: 3) {
                                 Spacer()
                                     .frame(width: 10)
@@ -158,7 +169,7 @@ struct LiveCaptureView: View {
             Image(systemName: "waveform")
                 .font(.title2)
                 .foregroundStyle(.quaternary)
-            Text("Select a mode and press Start")
+            Text(String(localized: "Select a mode and press Start", bundle: .module))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -174,7 +185,7 @@ struct LiveCaptureView: View {
                 Button {
                     appState.copyToClipboard(appState.liveText)
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                    Label(String(localized: "Copy", bundle: .module), systemImage: "doc.on.doc")
                         .font(.caption)
                 }
                 .buttonStyle(.bordered)
@@ -184,7 +195,7 @@ struct LiveCaptureView: View {
                 Button {
                     withAnimation { appState.liveText = "" }
                 } label: {
-                    Label("Clear", systemImage: "trash")
+                    Label(String(localized: "Clear", bundle: .module), systemImage: "trash")
                         .font(.caption)
                 }
                 .buttonStyle(.bordered)
@@ -193,7 +204,7 @@ struct LiveCaptureView: View {
             }
             Spacer()
             if !appState.liveText.isEmpty {
-                Text("\(appState.liveText.count) chars")
+                Text(String(localized: "\(appState.liveText.count) chars", bundle: .module))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

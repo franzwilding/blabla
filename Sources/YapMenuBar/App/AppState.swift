@@ -1,4 +1,5 @@
 import Combine
+import CoreGraphics
 import Foundation
 import SwiftUI
 
@@ -41,17 +42,34 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(wordTimestamps, forKey: "wordTimestamps") }
     }
     @Published var hotkeyEnabled: Bool {
+        didSet { UserDefaults.standard.set(hotkeyEnabled, forKey: "hotkeyEnabled") }
+    }
+    @Published var hotkeyKeyRaw: String {
         didSet {
-            UserDefaults.standard.set(hotkeyEnabled, forKey: "hotkeyEnabled")
-            if hotkeyEnabled { hotkeyService.enable() } else { hotkeyService.disable() }
+            UserDefaults.standard.set(hotkeyKeyRaw, forKey: "hotkeyKey")
+            hotkeyService.hotkeyKey = hotkeyKey
         }
+    }
+
+    var hotkeyKey: GlobalHotkeyService.HotkeyKey {
+        GlobalHotkeyService.HotkeyKey(rawValue: hotkeyKeyRaw) ?? .fn
+    }
+    @Published var dictationPunctuation: Bool {
+        didSet { UserDefaults.standard.set(dictationPunctuation, forKey: "dictationPunctuation") }
     }
     @Published var defaultFolderPath: String {
         didSet { UserDefaults.standard.set(defaultFolderPath, forKey: "defaultFolderPath") }
     }
 
     /// When true, prefix `[System]` / `[Mic]` labels in the combined transcript.
-    @Published var labelSources: Bool = false
+    /// Setting this to true while capturing starts the session recorder (transcript files).
+    @Published var labelSources: Bool = false {
+        didSet {
+            if labelSources && captureMode == .both && sessionRecorder == nil {
+                startSessionRecording()
+            }
+        }
+    }
 
     // MARK: Computed settings
 
@@ -71,10 +89,15 @@ final class AppState: ObservableObject {
 
     // MARK: Computed — default folder
 
-    var defaultFolderURL: URL? {
-        guard !defaultFolderPath.isEmpty else { return nil }
-        let url = URL(fileURLWithPath: defaultFolderPath, isDirectory: true)
-        return FileManager.default.isWritableFile(atPath: url.path) ? url : nil
+    var defaultFolderURL: URL {
+        let url: URL
+        if defaultFolderPath.isEmpty {
+            url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("BlaBla", isDirectory: true)
+        } else {
+            url = URL(fileURLWithPath: defaultFolderPath, isDirectory: true)
+        }
+        return url
     }
 
     // MARK: - Services
@@ -96,13 +119,18 @@ final class AppState: ObservableObject {
         let defaults = UserDefaults.standard
         selectedLocaleIdentifier = defaults.string(forKey: "selectedLocale") ?? Locale.current.identifier
         censorContent            = defaults.bool(forKey: "censorContent")
-        outputFormatRaw          = defaults.string(forKey: "outputFormat") ?? OutputFormat.txt.rawValue
+        outputFormatRaw          = defaults.string(forKey: "outputFormat") ?? OutputFormat.vtt.rawValue
         maxSentenceLength        = defaults.integer(forKey: "maxSentenceLength").nonzero(default: 40)
         wordTimestamps           = defaults.bool(forKey: "wordTimestamps")
         // Default to enabled; UserDefaults.bool returns false for missing keys
         hotkeyEnabled            = defaults.object(forKey: "hotkeyEnabled") == nil
                                      ? true
                                      : defaults.bool(forKey: "hotkeyEnabled")
+        hotkeyKeyRaw             = defaults.string(forKey: "hotkeyKey") ?? GlobalHotkeyService.HotkeyKey.fn.rawValue
+        // Default to true (keep punctuation); UserDefaults.bool returns false for missing keys
+        dictationPunctuation     = defaults.object(forKey: "dictationPunctuation") == nil
+                                     ? true
+                                     : defaults.bool(forKey: "dictationPunctuation")
         defaultFolderPath        = defaults.string(forKey: "defaultFolderPath") ?? ""
         loadHistory()
         observeServices()
@@ -137,13 +165,12 @@ final class AppState: ObservableObject {
         }
     }
 
-    func startBoth(mode: String = "Diktat") async {
+    func startBoth() async {
         guard captureMode == .idle else { return }
         liveText = ""
         labelSources = false
         clearError()
         do {
-            startSessionRecording(mode: mode)
             try await listenService.start(locale: selectedLocale, censor: censorContent)
             try await dictateService.start(locale: selectedLocale, censor: censorContent)
             captureMode = .both
@@ -155,6 +182,8 @@ final class AppState: ObservableObject {
     }
 
     func stopCapture() async {
+        let wasDictating = !labelSources && captureMode == .both
+        let wasTranscribing = labelSources
         let source = captureMode.label
         captureMode = .idle
         labelSources = false
@@ -165,12 +194,25 @@ final class AppState: ObservableObject {
         async let d: () = (try? dictateService.stop()) ?? ()
         _ = await (l, d)
 
-        stopSessionRecording()
+        let transcriptURL = stopSessionRecording()
 
         // Archive AFTER services have produced all results
         let combinedText = liveText
         if !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             archiveTranscript(combinedText, source: source)
+
+            // Dictation mode: insert text at the focused cursor position
+            if wasDictating {
+                let textToInsert = dictationPunctuation
+                    ? combinedText
+                    : stripPunctuation(from: combinedText)
+                insertTextAtCursor(textToInsert)
+            }
+        }
+
+        // Reveal transcript file in Finder (only for transcript mode)
+        if wasTranscribing, let transcriptURL {
+            NSWorkspace.shared.activateFileViewerSelecting([transcriptURL])
         }
     }
 
@@ -231,6 +273,7 @@ final class AppState: ObservableObject {
     }
 
     private func setupHotkeyService() {
+        hotkeyService.hotkeyKey = hotkeyKey
         hotkeyService.onStartBoth = { [weak self] in
             await self?.startBoth()
         }
@@ -240,12 +283,16 @@ final class AppState: ObservableObject {
         hotkeyService.onEnableSpeakerLabels = { [weak self] in
             self?.labelSources = true
         }
-        if hotkeyEnabled { hotkeyService.enable() }
+        hotkeyService.enable()
     }
 
-    private func startSessionRecording(mode: String) {
-        guard let folder = defaultFolderURL else { return }
-        guard let recorder = try? SessionRecorder(folder: folder, mode: mode) else { return }
+    private func startSessionRecording() {
+        let folder = defaultFolderURL
+        let recorder = SessionRecorder(
+            folder: folder,
+            mode: "Transkript",
+            fileExtension: outputFormat.rawValue
+        )
         sessionRecorder = recorder
         listenService.onAudioBuffer = { [recorder] buffer in
             recorder.writeAudio(buffer: buffer, source: .system)
@@ -255,9 +302,60 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func stopSessionRecording() {
+    @discardableResult
+    private func stopSessionRecording() -> URL? {
+        let url = sessionRecorder?.transcriptFileURL
         sessionRecorder?.finalize()
         sessionRecorder = nil
+        listenService.onAudioBuffer = nil
+        dictateService.onAudioBuffer = nil
+        return url
+    }
+
+    /// Removes sentence punctuation added by the speech recognizer.
+    private func stripPunctuation(from text: String) -> String {
+        text.replacingOccurrences(of: "[.,!?;:]+(?=\\s|$)", with: "", options: .regularExpression)
+            .replacingOccurrences(of: " {2,}", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Inserts text at the currently focused cursor position (any app) by
+    /// temporarily placing it on the clipboard and simulating ⌘V.
+    private func insertTextAtCursor(_ text: String) {
+        let pasteboard = NSPasteboard.general
+
+        // Back up all current clipboard items (preserves images, files, etc.)
+        let backup: [[(NSPasteboard.PasteboardType, Data)]] = (pasteboard.pasteboardItems ?? []).map { item in
+            item.types.compactMap { type in
+                guard let data = item.data(forType: type) else { return nil }
+                return (type, data)
+            }
+        }
+
+        // Place dictated text on the clipboard
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Simulate ⌘V keystroke (virtual key 0x09 = 'v')
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
+        let keyUp   = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
+        keyDown?.flags = .maskCommand
+        keyUp?.flags   = .maskCommand
+        keyDown?.post(tap: .cghidEventTap)
+        keyUp?.post(tap: .cghidEventTap)
+
+        // Restore the previous clipboard after the paste has been processed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            pasteboard.clearContents()
+            for itemData in backup {
+                let item = NSPasteboardItem()
+                for (type, data) in itemData {
+                    item.setData(data, forType: type)
+                }
+                pasteboard.writeObjects([item])
+            }
+        }
     }
 
     private func archiveTranscript(_ text: String, source: String) {

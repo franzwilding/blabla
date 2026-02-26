@@ -1,5 +1,5 @@
-// GlobalHotkeyService — state machine for Fn-key global hotkey control.
-// Detects Fn press/release via NSEvent monitors (both global and local)
+// GlobalHotkeyService — state machine for modifier-key global hotkey control.
+// Detects modifier press/release via NSEvent monitors (both global and local)
 // and drives push-to-talk / toggle recording modes.
 
 import AppKit
@@ -9,11 +9,43 @@ import Foundation
 @MainActor
 final class GlobalHotkeyService: ObservableObject {
 
+    // MARK: - Hotkey key selection
+
+    enum HotkeyKey: String, CaseIterable, Identifiable {
+        case fn       = "fn"
+        case control  = "control"
+        case option   = "option"
+        case command  = "command"
+        case shift    = "shift"
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .fn:      return "Fn"
+            case .control: return "Control"
+            case .option:  return "Option"
+            case .command: return "Command"
+            case .shift:   return "Shift"
+            }
+        }
+
+        var modifierFlag: NSEvent.ModifierFlags {
+            switch self {
+            case .fn:      return .function
+            case .control: return .control
+            case .option:  return .option
+            case .command: return .command
+            case .shift:   return .shift
+            }
+        }
+    }
+
     // MARK: - State machine
 
     enum HotkeyState: Equatable {
         case idle
-        case activeUndecided   // Fn pressed, capture started, waiting to see tap vs hold
+        case activeUndecided   // key pressed, capture started, waiting to see tap vs hold
         case toggleActive      // Tap detected, recording with speaker labels
     }
 
@@ -26,6 +58,9 @@ final class GlobalHotkeyService: ObservableObject {
     var onEnableSpeakerLabels: (() -> Void)?
 
     // MARK: - Configuration
+
+    /// Which modifier key triggers the hotkey.
+    var hotkeyKey: HotkeyKey = .fn
 
     /// Minimum hold duration (seconds) to distinguish hold from tap.
     private let holdThreshold: TimeInterval = 0.3
@@ -90,20 +125,20 @@ final class GlobalHotkeyService: ObservableObject {
     // MARK: - Event handling
 
     private func handleFlagsChanged(_ event: NSEvent) {
-        let fnPressed = event.modifierFlags.contains(.function)
+        let keyPressed = event.modifierFlags.contains(hotkeyKey.modifierFlag)
 
         switch hotkeyState {
         case .idle:
-            if fnPressed {
-                // Fn key down while idle → start capture, enter undecided state
+            if keyPressed {
+                // Modifier key down while idle → start capture, enter undecided state
                 fnPressTimestamp = Date()
                 hotkeyState = .activeUndecided
                 Task { await onStartBoth?() }
             }
 
         case .activeUndecided:
-            if !fnPressed {
-                // Fn key released — check hold duration
+            if !keyPressed {
+                // Modifier key released — check hold duration
                 let holdDuration = Date().timeIntervalSince(fnPressTimestamp ?? Date())
                 fnPressTimestamp = nil
 
@@ -119,8 +154,8 @@ final class GlobalHotkeyService: ObservableObject {
             }
 
         case .toggleActive:
-            if fnPressed {
-                // Fn pressed again while toggle-active → stop capture
+            if keyPressed {
+                // Modifier key pressed again while toggle-active → stop capture
                 hotkeyState = .idle
                 Task { await onStopCapture?() }
             }

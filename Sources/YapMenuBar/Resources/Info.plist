@@ -4,17 +4,17 @@
 <dict>
     <!-- Bundle identity -->
     <key>CFBundleIdentifier</key>
-    <string>com.yapbar.YapMenuBar</string>
+    <string>com.blabla.app</string>
     <key>CFBundleName</key>
-    <string>YapBar</string>
+    <string>Blabla</string>
     <key>CFBundleDisplayName</key>
-    <string>YapBar</string>
+    <string>Blabla</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleExecutable</key>
-    <string>YapMenuBar</string>
+    <string>Blabla</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleIconName</key>
@@ -30,17 +30,17 @@
 
     <!-- Privacy usage descriptions -->
     <key>NSMicrophoneUsageDescription</key>
-    <string>YapBar uses the microphone to transcribe your speech in real time.</string>
+    <string>Blabla uses the microphone to transcribe your speech in real time.</string>
 
     <!-- ScreenCaptureKit requires this for system audio capture -->
     <key>NSScreenCaptureDescription</key>
-    <string>YapBar captures system audio to transcribe what you hear in real time.</string>
+    <string>Blabla captures system audio to transcribe what you hear in real time.</string>
 
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>YapBar uses on-device speech recognition to transcribe audio.</string>
+    <string>Blabla uses on-device speech recognition to transcribe audio.</string>
 
     <key>NSAccessibilityUsageDescription</key>
-    <string>YapBar uses Accessibility to detect the Fn key globally for push-to-talk and toggle recording.</string>
+    <string>Blabla uses Accessibility to detect the Fn key globally for push-to-talk and toggle recording.</string>
 
     <!-- High-resolution display support -->
     <key>NSHighResolutionCapable</key>

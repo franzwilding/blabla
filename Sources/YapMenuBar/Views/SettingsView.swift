@@ -4,13 +4,35 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        TabView {
+            GeneralTab()
+                .environmentObject(appState)
+                .tabItem { Label(String(localized: "General", bundle: .module), systemImage: "gearshape") }
+
+            DictationTab()
+                .environmentObject(appState)
+                .tabItem { Label(String(localized: "Dictation", bundle: .module), systemImage: "mic.fill") }
+
+            TranscriptionTab()
+                .environmentObject(appState)
+                .tabItem { Label(String(localized: "Transcription", bundle: .module), systemImage: "waveform") }
+        }
+    }
+}
+
+// MARK: - General Tab
+
+private struct GeneralTab: View {
+    @EnvironmentObject var appState: AppState
     @State private var supportedLocales: [Locale] = []
 
     var body: some View {
         Form {
             // ── Language ─────────────────────────────────────────────────────
-            Section("Language") {
-                Picker("Transcription language", selection: $appState.selectedLocaleIdentifier) {
+            Section(String(localized: "Language", bundle: .module)) {
+                Picker(String(localized: "Transcription language", bundle: .module), selection: $appState.selectedLocaleIdentifier) {
                     ForEach(supportedLocales, id: \.identifier) { locale in
                         Text(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier)
                             .tag(locale.identifier)
@@ -18,95 +40,27 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.menu)
 
-                Text("Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices.")
+                Text(String(localized: "Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices.", bundle: .module))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            // ── Output format ─────────────────────────────────────────────────
-            Section("Output Format") {
-                Picker("Format", selection: $appState.outputFormatRaw) {
-                    ForEach(OutputFormat.allCases, id: \.rawValue) { fmt in
-                        Text(fmt.displayName).tag(fmt.rawValue)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Stepper(
-                    "Max sentence length: \(appState.maxSentenceLength) chars",
-                    value: $appState.maxSentenceLength,
-                    in: 10...200,
-                    step: 10
-                )
-                .font(.subheadline)
-
-                Toggle("Word-level timestamps (JSON only)", isOn: $appState.wordTimestamps)
+            // ── Content ─────────────────────────────────────────────────────
+            Section(String(localized: "Content", bundle: .module)) {
+                Toggle(String(localized: "Censor sensitive words", bundle: .module), isOn: $appState.censorContent)
             }
 
-            // ── Content ───────────────────────────────────────────────────────
-            Section("Content") {
-                Toggle("Censor sensitive words", isOn: $appState.censorContent)
+            // ── Hotkey ──────────────────────────────────────────────────────
+            Section(String(localized: "Hotkey", bundle: .module)) {
+                HotkeyRecorderView(hotkeyKeyRaw: $appState.hotkeyKeyRaw)
             }
 
-            // ── Aufnahmen ────────────────────────────────────────────────────
-            Section("Aufnahmen") {
+            // ── Permissions ─────────────────────────────────────────────────
+            Section(String(localized: "Permissions", bundle: .module)) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        if appState.defaultFolderPath.isEmpty {
-                            Text("Kein Ordner ausgewählt")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text(URL(fileURLWithPath: appState.defaultFolderPath).lastPathComponent)
-                            Text(appState.defaultFolderPath)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                    }
+                    Label(String(localized: "Microphone", bundle: .module), systemImage: "mic.fill")
                     Spacer()
-                    if !appState.defaultFolderPath.isEmpty {
-                        Button {
-                            appState.defaultFolderPath = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Button("Ausw\u{00E4}hlen\u{2026}") {
-                        let panel = NSOpenPanel()
-                        panel.canChooseFiles = false
-                        panel.canChooseDirectories = true
-                        panel.canCreateDirectories = true
-                        panel.prompt = "Ordner ausw\u{00E4}hlen"
-                        if panel.runModal() == .OK, let url = panel.url {
-                            appState.defaultFolderPath = url.path
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
-                Text("Text- und Audiodateien werden live in diesen Ordner geschrieben. Bei einem Absturz bleiben die bisherigen Daten erhalten.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            // ── Global Hotkey ─────────────────────────────────────────────────
-            Section("Global Hotkey") {
-                Toggle("Enable Fn key hotkey", isOn: $appState.hotkeyEnabled)
-
-                Text("Hold Fn for push-to-talk (both sources). Tap Fn to toggle recording with speaker labels. Tap again to stop.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            // ── Permissions ───────────────────────────────────────────────────
-            Section("Permissions") {
-                HStack {
-                    Label("Microphone", systemImage: "mic.fill")
-                    Spacer()
-                    Button("Open Privacy Settings") {
+                    Button(String(localized: "Open Privacy Settings", bundle: .module)) {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
                             NSWorkspace.shared.open(url)
                         }
@@ -115,10 +69,21 @@ struct SettingsView: View {
                     .controlSize(.small)
                 }
                 HStack {
-                    Label("Screen Recording", systemImage: "display")
+                    Label(String(localized: "Screen Recording", bundle: .module), systemImage: "display")
                     Spacer()
-                    Button("Open Privacy Settings") {
+                    Button(String(localized: "Open Privacy Settings", bundle: .module)) {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                HStack {
+                    Label(String(localized: "Accessibility", bundle: .module), systemImage: "accessibility")
+                    Spacer()
+                    Button(String(localized: "Open Privacy Settings", bundle: .module)) {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                             NSWorkspace.shared.open(url)
                         }
                     }
@@ -127,16 +92,16 @@ struct SettingsView: View {
                 }
             }
 
-            // ── About ─────────────────────────────────────────────────────────
-            Section("About") {
+            // ── About ───────────────────────────────────────────────────────
+            Section(String(localized: "About", bundle: .module)) {
                 HStack {
-                    Text("Core transcription engine")
+                    Text(String(localized: "Core transcription engine", bundle: .module))
                     Spacer()
                     Link("finnvoor/yap", destination: URL(string: "https://github.com/finnvoor/yap")!)
                         .font(.subheadline)
                 }
                 HStack {
-                    Text("Version")
+                    Text(String(localized: "Version", bundle: .module))
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                         .foregroundStyle(.secondary)
@@ -144,7 +109,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("YapBar Settings")
         .task { await loadSupportedLocales() }
     }
 
@@ -157,6 +121,181 @@ struct SettingsView: View {
         }
         if supportedLocales.isEmpty {
             supportedLocales = [.current]
+        }
+    }
+}
+
+// MARK: - Dictation Tab
+
+private struct DictationTab: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        Form {
+            Section(String(localized: "Dictation", bundle: .module)) {
+                Toggle(String(localized: "Automatic punctuation", bundle: .module), isOn: $appState.dictationPunctuation)
+
+                Text(String(localized: "Hold the hotkey for push-to-talk. Dictation inserts the transcribed text at the current cursor position.", bundle: .module))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Transcription Tab
+
+private struct TranscriptionTab: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        Form {
+            // ── Output format ───────────────────────────────────────────────
+            Section(String(localized: "Output Format", bundle: .module)) {
+                Picker(String(localized: "Format", bundle: .module), selection: $appState.outputFormatRaw) {
+                    ForEach(OutputFormat.allCases, id: \.rawValue) { fmt in
+                        Text(fmt.displayName).tag(fmt.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Stepper(
+                    String(localized: "Max sentence length: \(appState.maxSentenceLength) chars", bundle: .module),
+                    value: $appState.maxSentenceLength,
+                    in: 10...200,
+                    step: 10
+                )
+                .font(.subheadline)
+
+                Toggle(String(localized: "Word-level timestamps (JSON only)", bundle: .module), isOn: $appState.wordTimestamps)
+            }
+
+            // ── Recording folder ────────────────────────────────────────────
+            Section(String(localized: "Recording Folder", bundle: .module)) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(appState.defaultFolderURL.lastPathComponent)
+                        Text(appState.defaultFolderURL.path)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        if appState.defaultFolderPath.isEmpty {
+                            Text(String(localized: "(Default)", bundle: .module))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    Spacer()
+                    if !appState.defaultFolderPath.isEmpty {
+                        Button {
+                            appState.defaultFolderPath = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Button(String(localized: "Choose…", bundle: .module)) {
+                        let panel = NSOpenPanel()
+                        panel.canChooseFiles = false
+                        panel.canChooseDirectories = true
+                        panel.canCreateDirectories = true
+                        panel.prompt = String(localized: "Choose folder", bundle: .module)
+                        if panel.runModal() == .OK, let url = panel.url {
+                            appState.defaultFolderPath = url.path
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                Text(String(localized: "Text and audio files are written live to this folder. In case of a crash, existing data is preserved.", bundle: .module))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            // ── Help ────────────────────────────────────────────────────────
+            Section {
+                Text(String(localized: "Tap the hotkey to toggle transcription with speaker labels. Tap again to stop.", bundle: .module))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - HotkeyRecorderView
+
+private struct HotkeyRecorderView: View {
+    @Binding var hotkeyKeyRaw: String
+    @State private var isRecording = false
+    @State private var monitor: Any?
+
+    private var currentKey: GlobalHotkeyService.HotkeyKey {
+        GlobalHotkeyService.HotkeyKey(rawValue: hotkeyKeyRaw) ?? .fn
+    }
+
+    var body: some View {
+        HStack {
+            Text(String(localized: "Hotkey", bundle: .module))
+            Spacer()
+            Button {
+                isRecording = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "keyboard")
+                        .font(.caption)
+                    if isRecording {
+                        Text(String(localized: "Press a modifier key…", bundle: .module))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(currentKey.displayName)
+                            .font(.subheadline.bold())
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isRecording ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isRecording ? Color.accentColor : .clear, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .onChange(of: isRecording) { _, recording in
+            if recording {
+                installMonitor()
+            } else {
+                removeMonitor()
+            }
+        }
+        .onDisappear {
+            removeMonitor()
+        }
+    }
+
+    private func installMonitor() {
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+            for key in GlobalHotkeyService.HotkeyKey.allCases {
+                if event.modifierFlags.contains(key.modifierFlag) {
+                    hotkeyKeyRaw = key.rawValue
+                    isRecording = false
+                    return event
+                }
+            }
+            return event
+        }
+    }
+
+    private func removeMonitor() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
         }
     }
 }
