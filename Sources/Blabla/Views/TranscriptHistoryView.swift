@@ -20,7 +20,7 @@ struct TranscriptHistoryView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.tertiary)
                     .font(.caption)
-                TextField(String(localized: "Search transcripts…", bundle: .module), text: $searchText)
+                TextField(String(localized: "Search transcripts…", bundle: .main), text: $searchText)
                     .font(.caption)
                     .textFieldStyle(.plain)
                 if !searchText.isEmpty {
@@ -49,12 +49,12 @@ struct TranscriptHistoryView: View {
                         Button(role: .destructive) {
                             appState.deleteHistoryEntry(entry)
                         } label: {
-                            Label(String(localized: "Delete", bundle: .module), systemImage: "trash")
+                            Label(String(localized: "Delete", bundle: .main), systemImage: "trash")
                         }
                     }
                     .contextMenu {
-                        Button(String(localized: "Copy", bundle: .module)) { appState.copyToClipboard(entry.text) }
-                        Button(String(localized: "Delete", bundle: .module), role: .destructive) { appState.deleteHistoryEntry(entry) }
+                        Button(String(localized: "Copy", bundle: .main)) { appState.copyToClipboard(entry.text) }
+                        Button(String(localized: "Delete", bundle: .main), role: .destructive) { appState.deleteHistoryEntry(entry) }
                     }
                 }
                 .listStyle(.plain)
@@ -64,11 +64,11 @@ struct TranscriptHistoryView: View {
             if !appState.history.isEmpty {
                 Divider()
                 HStack {
-                    Text(String(localized: "\(appState.history.count) transcripts", bundle: .module))
+                    Text(String(localized: "\(appState.history.count) transcripts", bundle: .main))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                     Spacer()
-                    Button(String(localized: "Clear All", bundle: .module)) { appState.clearHistory() }
+                    Button(String(localized: "Clear All", bundle: .main)) { appState.clearHistory() }
                         .font(.caption2)
                         .buttonStyle(.plain)
                         .foregroundStyle(.red)
@@ -85,8 +85,8 @@ struct TranscriptHistoryView: View {
                 .font(.title2)
                 .foregroundStyle(.quaternary)
             Text(searchText.isEmpty
-                 ? String(localized: "No transcripts yet", bundle: .module)
-                 : String(localized: "No results", bundle: .module))
+                 ? String(localized: "No transcripts yet", bundle: .main)
+                 : String(localized: "No results", bundle: .main))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -139,7 +139,7 @@ private struct HistoryRowView: View {
                     Button {
                         appState.copyToClipboard(entry.text)
                     } label: {
-                        Label(String(localized: "Copy", bundle: .module), systemImage: "doc.on.doc").font(.caption2)
+                        Label(String(localized: "Copy", bundle: .main), systemImage: "doc.on.doc").font(.caption2)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.mini)

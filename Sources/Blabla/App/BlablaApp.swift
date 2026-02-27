@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct YapMenuBarApp: App {
+struct BlablaApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {

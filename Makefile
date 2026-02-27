@@ -1,4 +1,4 @@
-# YapMenuBar — common development tasks
+# Blabla — common development tasks
 
 .PHONY: build run update-yap open clean
 
@@ -8,7 +8,7 @@ build:
 
 ## Run directly (debug build, no .app bundle)
 run:
-	swift run YapMenuBar
+	swift run Blabla
 
 ## Pull latest changes from the yap upstream repo
 update-yap:

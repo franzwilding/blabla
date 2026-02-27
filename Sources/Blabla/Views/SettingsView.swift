@@ -9,15 +9,15 @@ struct SettingsView: View {
         TabView {
             GeneralTab()
                 .environmentObject(appState)
-                .tabItem { Label(String(localized: "General", bundle: .module), systemImage: "gearshape") }
+                .tabItem { Label(String(localized: "General", bundle: .main), systemImage: "gearshape") }
 
             DictationTab()
                 .environmentObject(appState)
-                .tabItem { Label(String(localized: "Dictation", bundle: .module), systemImage: "mic.fill") }
+                .tabItem { Label(String(localized: "Dictation", bundle: .main), systemImage: "mic.fill") }
 
             TranscriptionTab()
                 .environmentObject(appState)
-                .tabItem { Label(String(localized: "Transcription", bundle: .module), systemImage: "waveform") }
+                .tabItem { Label(String(localized: "Transcription", bundle: .main), systemImage: "waveform") }
         }
     }
 }
@@ -31,8 +31,8 @@ private struct GeneralTab: View {
     var body: some View {
         Form {
             // ── Language ─────────────────────────────────────────────────────
-            Section(String(localized: "Language", bundle: .module)) {
-                Picker(String(localized: "Transcription language", bundle: .module), selection: $appState.selectedLocaleIdentifier) {
+            Section(String(localized: "Language", bundle: .main)) {
+                Picker(String(localized: "Transcription language", bundle: .main), selection: $appState.selectedLocaleIdentifier) {
                     ForEach(supportedLocales, id: \.identifier) { locale in
                         Text(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier)
                             .tag(locale.identifier)
@@ -40,27 +40,27 @@ private struct GeneralTab: View {
                 }
                 .pickerStyle(.menu)
 
-                Text(String(localized: "Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices.", bundle: .module))
+                Text(String(localized: "Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices.", bundle: .main))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             // ── Content ─────────────────────────────────────────────────────
-            Section(String(localized: "Content", bundle: .module)) {
-                Toggle(String(localized: "Censor sensitive words", bundle: .module), isOn: $appState.censorContent)
+            Section(String(localized: "Content", bundle: .main)) {
+                Toggle(String(localized: "Censor sensitive words", bundle: .main), isOn: $appState.censorContent)
             }
 
             // ── Hotkey ──────────────────────────────────────────────────────
-            Section(String(localized: "Hotkey", bundle: .module)) {
+            Section(String(localized: "Hotkey", bundle: .main)) {
                 HotkeyRecorderView(hotkeyKeyRaw: $appState.hotkeyKeyRaw)
             }
 
             // ── Permissions ─────────────────────────────────────────────────
-            Section(String(localized: "Permissions", bundle: .module)) {
+            Section(String(localized: "Permissions", bundle: .main)) {
                 HStack {
-                    Label(String(localized: "Microphone", bundle: .module), systemImage: "mic.fill")
+                    Label(String(localized: "Microphone", bundle: .main), systemImage: "mic.fill")
                     Spacer()
-                    Button(String(localized: "Open Privacy Settings", bundle: .module)) {
+                    Button(String(localized: "Open Privacy Settings", bundle: .main)) {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
                             NSWorkspace.shared.open(url)
                         }
@@ -69,9 +69,9 @@ private struct GeneralTab: View {
                     .controlSize(.small)
                 }
                 HStack {
-                    Label(String(localized: "Screen Recording", bundle: .module), systemImage: "display")
+                    Label(String(localized: "Screen Recording", bundle: .main), systemImage: "display")
                     Spacer()
-                    Button(String(localized: "Open Privacy Settings", bundle: .module)) {
+                    Button(String(localized: "Open Privacy Settings", bundle: .main)) {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
                             NSWorkspace.shared.open(url)
                         }
@@ -80,9 +80,9 @@ private struct GeneralTab: View {
                     .controlSize(.small)
                 }
                 HStack {
-                    Label(String(localized: "Accessibility", bundle: .module), systemImage: "accessibility")
+                    Label(String(localized: "Accessibility", bundle: .main), systemImage: "accessibility")
                     Spacer()
-                    Button(String(localized: "Open Privacy Settings", bundle: .module)) {
+                    Button(String(localized: "Open Privacy Settings", bundle: .main)) {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                             NSWorkspace.shared.open(url)
                         }
@@ -93,15 +93,15 @@ private struct GeneralTab: View {
             }
 
             // ── About ───────────────────────────────────────────────────────
-            Section(String(localized: "About", bundle: .module)) {
+            Section(String(localized: "About", bundle: .main)) {
                 HStack {
-                    Text(String(localized: "Core transcription engine", bundle: .module))
+                    Text(String(localized: "Core transcription engine", bundle: .main))
                     Spacer()
                     Link("finnvoor/yap", destination: URL(string: "https://github.com/finnvoor/yap")!)
                         .font(.subheadline)
                 }
                 HStack {
-                    Text(String(localized: "Version", bundle: .module))
+                    Text(String(localized: "Version", bundle: .main))
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                         .foregroundStyle(.secondary)
@@ -132,10 +132,10 @@ private struct DictationTab: View {
 
     var body: some View {
         Form {
-            Section(String(localized: "Dictation", bundle: .module)) {
-                Toggle(String(localized: "Automatic punctuation", bundle: .module), isOn: $appState.dictationPunctuation)
+            Section(String(localized: "Dictation", bundle: .main)) {
+                Toggle(String(localized: "Automatic punctuation", bundle: .main), isOn: $appState.dictationPunctuation)
 
-                Text(String(localized: "Hold the hotkey for push-to-talk. Dictation inserts the transcribed text at the current cursor position.", bundle: .module))
+                Text(String(localized: "Hold the hotkey for push-to-talk. Dictation inserts the transcribed text at the current cursor position.", bundle: .main))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -152,8 +152,8 @@ private struct TranscriptionTab: View {
     var body: some View {
         Form {
             // ── Output format ───────────────────────────────────────────────
-            Section(String(localized: "Output Format", bundle: .module)) {
-                Picker(String(localized: "Format", bundle: .module), selection: $appState.outputFormatRaw) {
+            Section(String(localized: "Output Format", bundle: .main)) {
+                Picker(String(localized: "Format", bundle: .main), selection: $appState.outputFormatRaw) {
                     ForEach(OutputFormat.allCases, id: \.rawValue) { fmt in
                         Text(fmt.displayName).tag(fmt.rawValue)
                     }
@@ -161,18 +161,18 @@ private struct TranscriptionTab: View {
                 .pickerStyle(.segmented)
 
                 Stepper(
-                    String(localized: "Max sentence length: \(appState.maxSentenceLength) chars", bundle: .module),
+                    String(localized: "Max sentence length: \(appState.maxSentenceLength) chars", bundle: .main),
                     value: $appState.maxSentenceLength,
                     in: 10...200,
                     step: 10
                 )
                 .font(.subheadline)
 
-                Toggle(String(localized: "Word-level timestamps (JSON only)", bundle: .module), isOn: $appState.wordTimestamps)
+                Toggle(String(localized: "Word-level timestamps (JSON only)", bundle: .main), isOn: $appState.wordTimestamps)
             }
 
             // ── Recording folder ────────────────────────────────────────────
-            Section(String(localized: "Recording Folder", bundle: .module)) {
+            Section(String(localized: "Recording Folder", bundle: .main)) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(appState.defaultFolderURL.lastPathComponent)
@@ -182,7 +182,7 @@ private struct TranscriptionTab: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                         if appState.defaultFolderPath.isEmpty {
-                            Text(String(localized: "(Default)", bundle: .module))
+                            Text(String(localized: "(Default)", bundle: .main))
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }
@@ -197,12 +197,12 @@ private struct TranscriptionTab: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    Button(String(localized: "Choose…", bundle: .module)) {
+                    Button(String(localized: "Choose…", bundle: .main)) {
                         let panel = NSOpenPanel()
                         panel.canChooseFiles = false
                         panel.canChooseDirectories = true
                         panel.canCreateDirectories = true
-                        panel.prompt = String(localized: "Choose folder", bundle: .module)
+                        panel.prompt = String(localized: "Choose folder", bundle: .main)
                         if panel.runModal() == .OK, let url = panel.url {
                             appState.defaultFolderPath = url.path
                         }
@@ -210,14 +210,14 @@ private struct TranscriptionTab: View {
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
-                Text(String(localized: "Text and audio files are written live to this folder. In case of a crash, existing data is preserved.", bundle: .module))
+                Text(String(localized: "Text and audio files are written live to this folder. In case of a crash, existing data is preserved.", bundle: .main))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             // ── Help ────────────────────────────────────────────────────────
             Section {
-                Text(String(localized: "Tap the hotkey to toggle transcription with speaker labels. Tap again to stop.", bundle: .module))
+                Text(String(localized: "Tap the hotkey to toggle transcription with speaker labels. Tap again to stop.", bundle: .main))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -239,7 +239,7 @@ private struct HotkeyRecorderView: View {
 
     var body: some View {
         HStack {
-            Text(String(localized: "Hotkey", bundle: .module))
+            Text(String(localized: "Hotkey", bundle: .main))
             Spacer()
             Button {
                 isRecording = true
@@ -248,7 +248,7 @@ private struct HotkeyRecorderView: View {
                     Image(systemName: "keyboard")
                         .font(.caption)
                     if isRecording {
-                        Text(String(localized: "Press a modifier key…", bundle: .module))
+                        Text(String(localized: "Press a modifier key…", bundle: .main))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else {

@@ -33,9 +33,9 @@ struct LiveCaptureView: View {
 
         var label: String {
             switch self {
-            case .listen:  return String(localized: "System Audio", bundle: .module)
-            case .dictate: return String(localized: "Microphone", bundle: .module)
-            case .both:    return String(localized: "Both", bundle: .module)
+            case .listen:  return String(localized: "System Audio", bundle: .main)
+            case .dictate: return String(localized: "Microphone", bundle: .main)
+            case .both:    return String(localized: "Both", bundle: .main)
             }
         }
 
@@ -79,8 +79,8 @@ struct LiveCaptureView: View {
             Image(systemName: "keyboard")
                 .font(.caption2)
             Text(appState.hotkeyService.hotkeyState == .activeUndecided
-                 ? String(localized: "\(appState.hotkeyKey.displayName) Hold", bundle: .module)
-                 : String(localized: "\(appState.hotkeyKey.displayName) Toggle", bundle: .module))
+                 ? String(localized: "\(appState.hotkeyKey.displayName) Hold", bundle: .main)
+                 : String(localized: "\(appState.hotkeyKey.displayName) Toggle", bundle: .main))
                 .font(.caption.bold())
         }
         .padding(.horizontal, 10)
@@ -106,8 +106,8 @@ struct LiveCaptureView: View {
         } label: {
             Label(
                 appState.isCapturing
-                    ? String(localized: "Stop", bundle: .module)
-                    : String(localized: "Start", bundle: .module),
+                    ? String(localized: "Stop", bundle: .main)
+                    : String(localized: "Start", bundle: .main),
                 systemImage: appState.isCapturing ? "stop.fill" : "play.fill"
             )
             .font(.caption.bold())
@@ -169,7 +169,7 @@ struct LiveCaptureView: View {
             Image(systemName: "waveform")
                 .font(.title2)
                 .foregroundStyle(.quaternary)
-            Text(String(localized: "Select a mode and press Start", bundle: .module))
+            Text(String(localized: "Select a mode and press Start", bundle: .main))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -185,7 +185,7 @@ struct LiveCaptureView: View {
                 Button {
                     appState.copyToClipboard(appState.liveText)
                 } label: {
-                    Label(String(localized: "Copy", bundle: .module), systemImage: "doc.on.doc")
+                    Label(String(localized: "Copy", bundle: .main), systemImage: "doc.on.doc")
                         .font(.caption)
                 }
                 .buttonStyle(.bordered)
@@ -195,7 +195,7 @@ struct LiveCaptureView: View {
                 Button {
                     withAnimation { appState.liveText = "" }
                 } label: {
-                    Label(String(localized: "Clear", bundle: .module), systemImage: "trash")
+                    Label(String(localized: "Clear", bundle: .main), systemImage: "trash")
                         .font(.caption)
                 }
                 .buttonStyle(.bordered)
@@ -204,7 +204,7 @@ struct LiveCaptureView: View {
             }
             Spacer()
             if !appState.liveText.isEmpty {
-                Text(String(localized: "\(appState.liveText.count) chars", bundle: .module))
+                Text(String(localized: "\(appState.liveText.count) chars", bundle: .main))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

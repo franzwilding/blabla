@@ -1,9 +1,9 @@
 // swift-tools-version: 6.2
-// YapMenuBar — on-device speech transcription as a macOS Menu Bar app
+// Blabla — on-device speech transcription as a macOS Menu Bar app
 //
 // Core transcription files (TranscriptionEngine, OutputFormat, AttributedString+Extensions)
 // are pulled DIRECTLY from the yap git submodule (https://github.com/finnvoor/yap).
-// The `Sources/YapMenuBar/YapSources/` directory contains symlinks that resolve to
+// The `Sources/Blabla/YapSources/` directory contains symlinks that resolve to
 // the live submodule files — no copying, no forking.
 //
 // Workflow:
@@ -13,11 +13,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "YapMenuBar",
+    name: "Blabla",
     defaultLocalization: "en",
     platforms: [.macOS(.v26)],
     products: [
-        .executable(name: "Blabla", targets: ["YapMenuBar"]),
+        .executable(name: "Blabla", targets: ["Blabla"]),
     ],
     dependencies: [
         // Required because yap/Sources/yap/OutputFormat.swift conforms to
@@ -26,19 +26,15 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.0"),
     ],
     targets: [
-        // ── YapMenuBar ─────────────────────────────────────────────────────────
-        // Single target: our SwiftUI app + yap core (via symlinks in YapSources/).
-        // All yap types stay `internal`, which is perfect for an app target.
         .executableTarget(
-            name: "YapMenuBar",
+            name: "Blabla",
             dependencies: [
-                // OutputFormat.swift (from yap, via symlink) conforms to EnumerableFlag
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Sources/YapMenuBar",
+            path: "Sources/Blabla",
             exclude: [
                 "Resources/Info.plist",
-                "Resources/YapMenuBar.entitlements",
+                "Resources/Blabla.entitlements",
             ],
             resources: [
                 .process("Resources/Assets.xcassets"),

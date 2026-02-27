@@ -18,8 +18,8 @@ struct MenuBarContentView: View {
             // ── Diktieren (≡ modifier hold) ──
             MenuRow(
                 title: isDictating
-                    ? String(localized: "Stop Dictation", bundle: .module)
-                    : String(localized: "Dictation", bundle: .module),
+                    ? String(localized: "Stop Dictation", bundle: .main)
+                    : String(localized: "Dictation", bundle: .main),
                 shortcut: "\(appState.hotkeyKey.displayName) HOLD",
                 isDisabled: isTranscribing
             ) {
@@ -36,8 +36,8 @@ struct MenuBarContentView: View {
             // ── Transkript (≡ modifier tap/toggle) ──
             MenuRow(
                 title: isTranscribing
-                    ? String(localized: "Stop Transcript", bundle: .module)
-                    : String(localized: "Start Transcript", bundle: .module),
+                    ? String(localized: "Stop Transcript", bundle: .main)
+                    : String(localized: "Start Transcript", bundle: .main),
                 shortcut: "\(appState.hotkeyKey.displayName) PRESS",
                 isDisabled: isDictating
             ) {
@@ -62,7 +62,7 @@ struct MenuBarContentView: View {
 
             // ── Beenden ──
             MenuRow(
-                title: String(localized: "Quit", bundle: .module),
+                title: String(localized: "Quit", bundle: .main),
                 icon: "power",
                 shortcut: "⌘Q"
             ) {
@@ -137,7 +137,7 @@ private struct SettingsMenuRow: View {
                 Image(systemName: "gearshape")
                     .frame(width: 20)
 
-                Text(String(localized: "Settings", bundle: .module))
+                Text(String(localized: "Settings", bundle: .main))
 
                 Spacer(minLength: 16)
 
