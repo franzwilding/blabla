@@ -93,7 +93,7 @@ final class AppState: ObservableObject {
         let url: URL
         if defaultFolderPath.isEmpty {
             url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("BlaBla", isDirectory: true)
+                .appendingPathComponent("Blabla", isDirectory: true)
         } else {
             url = URL(fileURLWithPath: defaultFolderPath, isDirectory: true)
         }

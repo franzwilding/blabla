@@ -17,6 +17,7 @@ struct BlablaApp: App {
             SettingsView()
                 .environmentObject(appState)
                 .frame(width: 500, height: 440)
+                .onAppear { NSApp.activate(ignoringOtherApps: true) }
         }
     }
 }

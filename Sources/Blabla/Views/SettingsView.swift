@@ -65,21 +65,26 @@ private struct GeneralTab: View {
                 PermissionRow(
                     label: String(localized: "Microphone", bundle: .main),
                     icon: "mic.fill",
-                    granted: micPermission,
-                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-                )
+                    granted: micPermission
+                ) {
+                    AVCaptureDevice.requestAccess(for: .audio) { _ in }
+                }
                 PermissionRow(
                     label: String(localized: "Screen Recording", bundle: .main),
                     icon: "display",
-                    granted: screenPermission,
-                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
-                )
+                    granted: screenPermission
+                ) {
+                    Task {
+                        _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                    }
+                }
                 PermissionRow(
                     label: String(localized: "Accessibility", bundle: .main),
                     icon: "accessibility",
-                    granted: accessibilityPermission,
-                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-                )
+                    granted: accessibilityPermission
+                ) {
+                    requestAccessibility()
+                }
             }
 
             // ── About ───────────────────────────────────────────────────────
@@ -114,6 +119,12 @@ private struct GeneralTab: View {
             checkPermissions()
             try? await Task.sleep(for: .seconds(2))
         }
+    }
+
+    private func requestAccessibility() {
+        let key = "AXTrustedCheckOptionPrompt" as CFString
+        let opts = [key: kCFBooleanTrue!] as CFDictionary
+        AXIsProcessTrustedWithOptions(opts)
     }
 
     private func loadSupportedLocales() async {
@@ -310,21 +321,24 @@ private struct PermissionRow: View {
     let label: String
     let icon: String
     let granted: Bool
-    let settingsURL: String
+    let request: () -> Void
 
     var body: some View {
         HStack {
             Label(label, systemImage: icon)
             Spacer()
-            Image(systemName: granted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundStyle(granted ? .green : .red)
-            Button(String(localized: "Open Privacy Settings", bundle: .main)) {
-                if let url = URL(string: settingsURL) {
-                    NSWorkspace.shared.open(url)
+            if granted {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+                Button(String(localized: "Grant", bundle: .main)) {
+                    request()
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
     }
 }
