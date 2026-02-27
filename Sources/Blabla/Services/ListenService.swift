@@ -86,17 +86,15 @@ final class ListenService: ObservableObject {
         inputContinuation = continuation
 
         let cfg = SCStreamConfiguration()
-        cfg.capturesAudio            = true
-        cfg.sampleRate               = Int(targetFormat.sampleRate)
-        cfg.channelCount             = Int(targetFormat.channelCount)
+        cfg.capturesAudio               = true
+        cfg.sampleRate                  = Int(targetFormat.sampleRate)
+        cfg.channelCount                = Int(targetFormat.channelCount)
         cfg.excludesCurrentProcessAudio = true
-        cfg.width                    = 2
-        cfg.height                   = 2
-        cfg.minimumFrameInterval     = CMTime(value: 1, timescale: 1)
 
         let delegate = AudioCaptureDelegate(targetFormat: targetFormat, continuation: continuation)
         delegate.onSourceBuffer = self.onAudioBuffer
         let filter   = SCContentFilter(display: display, excludingWindows: [])
+        filter.includeMenuBar = false
         let stream   = SCStream(filter: filter, configuration: cfg, delegate: nil)
         try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: .global())
 

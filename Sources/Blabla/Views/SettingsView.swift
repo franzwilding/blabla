@@ -70,13 +70,11 @@ private struct GeneralTab: View {
                     AVCaptureDevice.requestAccess(for: .audio) { _ in }
                 }
                 PermissionRow(
-                    label: String(localized: "Screen Recording", bundle: .main),
-                    icon: "display",
+                    label: String(localized: "System Audio", bundle: .main),
+                    icon: "speaker.wave.2.fill",
                     granted: screenPermission
                 ) {
-                    Task {
-                        _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-                    }
+                    requestScreenCapture()
                 }
                 PermissionRow(
                     label: String(localized: "Accessibility", bundle: .main),
@@ -118,6 +116,12 @@ private struct GeneralTab: View {
         while !Task.isCancelled {
             checkPermissions()
             try? await Task.sleep(for: .seconds(2))
+        }
+    }
+
+    private nonisolated func requestScreenCapture() {
+        Task { @Sendable in
+            _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         }
     }
 
