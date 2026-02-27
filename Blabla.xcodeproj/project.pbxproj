@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -231,7 +231,6 @@
 			packageReferences = (
 				89653D8CFAA469FC5B6E9D25 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -300,12 +299,14 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Sources/Blabla/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Blabla;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.blabla.app;
+				PRODUCT_BUNDLE_IDENTIFIER = at.co.unite.blabla;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};
@@ -383,12 +384,14 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Sources/Blabla/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Blabla;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.blabla.app;
+				PRODUCT_BUNDLE_IDENTIFIER = at.co.unite.blabla;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};

@@ -121,7 +121,17 @@ private struct GeneralTab: View {
 
     private nonisolated func requestScreenCapture() {
         Task { @Sendable in
-            _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+            guard let display = content?.displays.first else { return }
+            // Audio-only: includingApplications with empty list triggers "System Audio Only" permission
+            let filter = SCContentFilter(display: display, including: [], exceptingWindows: [])
+            let cfg = SCStreamConfiguration()
+            cfg.capturesAudio = true
+            cfg.width = 2
+            cfg.height = 2
+            let stream = SCStream(filter: filter, configuration: cfg, delegate: nil)
+            try? await stream.startCapture()
+            try? await stream.stopCapture()
         }
     }
 

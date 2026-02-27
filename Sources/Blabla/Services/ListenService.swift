@@ -68,10 +68,10 @@ final class ListenService: ObservableObject {
             throw ListenError.noCompatibleAudioFormat
         }
 
-        // ScreenCaptureKit for system audio
+        // ScreenCaptureKit for system audio (audio-only capture)
         let content: SCShareableContent
         do {
-            content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         } catch {
             state = .idle
             throw ListenError.screenRecordingPermissionDenied
@@ -90,11 +90,14 @@ final class ListenService: ObservableObject {
         cfg.sampleRate                  = Int(targetFormat.sampleRate)
         cfg.channelCount                = Int(targetFormat.channelCount)
         cfg.excludesCurrentProcessAudio = true
+        cfg.width                       = 2
+        cfg.height                      = 2
+        cfg.minimumFrameInterval        = CMTime(value: 1, timescale: 1)
 
         let delegate = AudioCaptureDelegate(targetFormat: targetFormat, continuation: continuation)
         delegate.onSourceBuffer = self.onAudioBuffer
-        let filter   = SCContentFilter(display: display, excludingWindows: [])
-        filter.includeMenuBar = false
+        // Use includingApplications with empty list: captures no screen content, only system audio
+        let filter   = SCContentFilter(display: display, including: [], exceptingWindows: [])
         let stream   = SCStream(filter: filter, configuration: cfg, delegate: nil)
         try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: .global())
 
