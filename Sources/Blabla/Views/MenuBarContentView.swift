@@ -21,7 +21,7 @@ struct MenuBarContentView: View {
                     ? String(localized: "Stop Dictation", bundle: .main)
                     : String(localized: "Dictation", bundle: .main),
                 icon: "mic.fill",
-                shortcut: "\(appState.hotkeyDisplayName) \(String(localized: "HOLD", bundle: .main))",
+                shortcut: appState.hotkeyShortcut,
                 isDisabled: isTranscribing
             ) {
                 dismissPopover()

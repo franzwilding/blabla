@@ -71,6 +71,15 @@ final class AppState: ObservableObject {
         }
         return name
     }
+
+    /// Compact symbol-style shortcut string for menu display (e.g. "🌐", "⌃D").
+    var hotkeyShortcut: String {
+        var s = hotkeyKey.symbol
+        if let keyCode = hotkeyKeyCode {
+            s += GlobalHotkeyService.displayName(forKeyCode: keyCode)
+        }
+        return s
+    }
     @Published var dictationPunctuation: Bool {
         didSet { UserDefaults.standard.set(dictationPunctuation, forKey: "dictationPunctuation") }
     }

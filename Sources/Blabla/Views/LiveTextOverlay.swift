@@ -9,6 +9,7 @@ final class LiveTextOverlayController {
 
     private var window: NSWindow?
     private var cancellable: AnyCancellable?
+    private let textModel = OverlayTextModel()
 
     func attach(to appState: AppState) {
         cancellable = appState.$liveText
@@ -38,6 +39,11 @@ final class LiveTextOverlayController {
             w.hasShadow = false
             w.ignoresMouseEvents = true
             w.collectionBehavior = [.canJoinAllSpaces, .stationary]
+
+            let hostView = NSHostingView(rootView:
+                ScrollingTextView(model: textModel)
+            )
+            w.contentView = hostView
             window = w
         }
 
@@ -53,14 +59,10 @@ final class LiveTextOverlayController {
             display: false
         )
 
-        let singleLine = text
+        textModel.text = text
             .components(separatedBy: .newlines)
             .joined(separator: " — ")
 
-        let hostView = NSHostingView(rootView:
-            ScrollingTextView(text: singleLine)
-        )
-        window.contentView = hostView
         window.orderFront(nil)
     }
 
@@ -69,10 +71,16 @@ final class LiveTextOverlayController {
     }
 }
 
+// MARK: - OverlayTextModel
+
+final class OverlayTextModel: ObservableObject {
+    @Published var text: String = ""
+}
+
 // MARK: - ScrollingTextView
 
 private struct ScrollingTextView: View {
-    let text: String
+    @ObservedObject var model: OverlayTextModel
 
     @State private var offset: CGFloat = 0
     @State private var textWidth: CGFloat = 0
@@ -80,22 +88,22 @@ private struct ScrollingTextView: View {
 
     var body: some View {
         GeometryReader { geo in
-            Text(text)
+            Text(model.text)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .fixedSize()
                 .background(GeometryReader { textGeo in
-                    Color.clear.onAppear {
-                        textWidth = textGeo.size.width
-                        containerWidth = geo.size.width
-                        startScrolling()
-                    }
-                    .onChange(of: text) {
-                        textWidth = textGeo.size.width
-                        offset = containerWidth
-                        startScrolling()
-                    }
+                    Color.clear
+                        .onAppear {
+                            containerWidth = geo.size.width
+                            textWidth = textGeo.size.width
+                            startScrolling()
+                        }
+                        .onChange(of: model.text) {
+                            textWidth = textGeo.size.width
+                            startScrolling()
+                        }
                 })
                 .offset(x: offset)
         }
