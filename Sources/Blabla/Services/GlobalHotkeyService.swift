@@ -33,7 +33,7 @@ final class GlobalHotkeyService: ObservableObject {
         /// Compact macOS-style symbol for use in menu shortcut labels.
         var symbol: String {
             switch self {
-            case .fn:      return "🌐"
+            case .fn:      return "Fn"
             case .control: return "⌃"
             case .option:  return "⌥"
             case .command: return "⌘"

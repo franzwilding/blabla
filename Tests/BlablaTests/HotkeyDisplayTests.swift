@@ -29,7 +29,7 @@ struct HotkeyDisplayTests {
     // MARK: - HotkeyKey.symbol (compact macOS-style, for menu shortcuts)
 
     @Test func symbolFnIsGlobe() {
-        #expect(GlobalHotkeyService.HotkeyKey.fn.symbol == "🌐")
+        #expect(GlobalHotkeyService.HotkeyKey.fn.symbol == "Fn")
     }
 
     @Test func symbolControlIsCaret() {
