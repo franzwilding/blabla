@@ -23,7 +23,6 @@ final class AppState: ObservableObject {
     @Published var captureMode: CaptureMode = .idle
     @Published var liveText: String = ""
     @Published var errorMessage: String?
-    @Published var isTranscribingFile = false
 
     // MARK: Persisted settings (UserDefaults via @AppStorage analogue)
 
@@ -104,15 +103,6 @@ final class AppState: ObservableObject {
 
     var isCapturing: Bool { captureMode != .idle }
 
-    var menuBarIcon: String {
-        switch captureMode {
-        case .idle: return "waveform"
-        case .listening: return "speaker.wave.3.fill"
-        case .dictating: return "mic.fill"
-        case .both: return "waveform.badge.mic"
-        }
-    }
-
     // MARK: Computed — default folder
 
     var defaultFolderURL: URL {
@@ -183,19 +173,6 @@ final class AppState: ObservableObject {
 
     // MARK: - Capture actions
 
-    func startListening() async {
-        guard captureMode == .idle else { return }
-        hotkeyService.resetToIdle()
-        liveText = ""
-        clearError()
-        do {
-            try await listenService.start(locale: selectedLocale, censor: censorContent)
-            captureMode = .listening
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
     func startDictating() async {
         guard captureMode == .idle else { return }
         liveText = ""
@@ -236,6 +213,11 @@ final class AppState: ObservableObject {
         let wasDictating = !labelSources && (captureMode == .both || captureMode == .dictating)
         let wasTranscribing = labelSources
         let source = captureMode.label
+
+        // Capture text BEFORE stopping services — stop() clears liveFragment
+        // which triggers Combine to reset liveText to "".
+        let combinedText = liveText
+
         captureMode = .idle
         labelSources = false
         hotkeyService.resetToIdle()
@@ -246,9 +228,6 @@ final class AppState: ObservableObject {
         _ = await (l, d)
 
         let transcriptURL = stopSessionRecording()
-
-        // Archive AFTER services have produced all results
-        let combinedText = liveText
         if !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             archiveTranscript(combinedText, source: source)
 
@@ -273,32 +252,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    // MARK: - File transcription
-
-    func transcribeFile(_ url: URL) async {
-        isTranscribingFile = true
-        clearError()
-        defer { isTranscribingFile = false }
-        do {
-            let options = TranscriptionEngine.Options(
-                locale: selectedLocale,
-                censor: censorContent,
-                outputFormat: outputFormat,
-                maxLength: maxSentenceLength,
-                wordTimestamps: wordTimestamps
-            )
-            let result = try await TranscriptionEngine.transcribe(file: url, options: options)
-            archiveTranscript(result, source: "File: \(url.lastPathComponent)")
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func copyToClipboard(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
-
     func openTranscriptsFolder() {
         let folder = defaultFolderURL
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -306,12 +259,6 @@ final class AppState: ObservableObject {
     }
 
     func clearError() { errorMessage = nil }
-
-    func deleteHistoryEntry(_ entry: TranscriptEntry) {
-        history.removeAll { $0.id == entry.id }
-    }
-
-    func clearHistory() { history.removeAll() }
 
     // MARK: - Private
 
