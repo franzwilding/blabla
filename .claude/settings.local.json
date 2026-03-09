@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(git:*)",
+      "Bash(swift package:*)",
+      "Bash(swift:*)",
+      "Bash(make build:*)",
+      "Bash(make run:*)",
+      "Bash(xcodegen:*)",
+      "Bash(brew:*)",
+      "Bash(open:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(mv YapMenuBar:*)",
+      "Bash(tccutil reset:*)",
+      "Bash(grep:*)",
+      "WebSearch",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:gist.githubusercontent.com)",
+      "Bash(/tmp/check_tap2.swift:*)",
+      "Bash(/tmp/check_tap3.swift:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(/tmp/icon_venv/bin/python3:*)",
+      "Bash(screencapture:*)",
+      "Bash(osascript:*)",
+      "Bash(mv:*)"
+    ]
+  }
+}

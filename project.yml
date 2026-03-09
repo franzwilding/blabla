@@ -5,11 +5,6 @@ options:
     macOS: "26.0"
   createIntermediateGroups: true
 
-packages:
-  ArgumentParser:
-    url: https://github.com/apple/swift-argument-parser.git
-    from: 1.2.0
-
 targets:
   Blabla:
     type: application
@@ -29,6 +24,4 @@ targets:
         INFOPLIST_FILE: Sources/Blabla/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Sources/Blabla/Resources/Blabla.entitlements
     dependencies:
-      - package: ArgumentParser
-        product: ArgumentParser
       - sdk: ScreenCaptureKit.framework

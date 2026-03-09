@@ -2,20 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Allows capturing system audio via ScreenCaptureKit -->
-    <key>com.apple.security.device.audio-input</key>
-    <true/>
-
-    <!-- Allows microphone access for dictation -->
-    <key>com.apple.security.device.microphone</key>
-    <true/>
-
-    <!-- Needed for ScreenCaptureKit system audio capture -->
-    <key>com.apple.security.screen-capture</key>
-    <true/>
-
-    <!-- Hardened runtime -->
-    <key>com.apple.security.cs.allow-jit</key>
-    <false/>
+	<key>com.apple.security.cs.allow-jit</key>
+	<false/>
 </dict>
 </plist>

@@ -1,6 +1,6 @@
 import AppKit
 import AVFoundation
-import ScreenCaptureKit
+import CoreAudio
 import Speech
 import SwiftUI
 
@@ -28,28 +28,13 @@ struct SettingsView: View {
 
 private struct GeneralTab: View {
     @EnvironmentObject var appState: AppState
-    @State private var supportedLocales: [Locale] = []
     @State private var micPermission = false
-    @State private var screenPermission = false
+    @State private var audioTapPermission = false
     @State private var accessibilityPermission = false
+    @State private var audioTapRequested = false
 
     var body: some View {
         Form {
-            // ── Language ─────────────────────────────────────────────────────
-            Section(String(localized: "Language", bundle: .main)) {
-                Picker(String(localized: "Transcription language", bundle: .main), selection: $appState.selectedLocaleIdentifier) {
-                    ForEach(supportedLocales, id: \.identifier) { locale in
-                        Text(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier)
-                            .tag(locale.identifier)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Text(String(localized: "Languages must be downloaded by the system. Open System Settings → Accessibility → Live Speech to manage installed voices.", bundle: .main))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             // ── Content ─────────────────────────────────────────────────────
             Section(String(localized: "Content", bundle: .main)) {
                 Toggle(String(localized: "Censor sensitive words", bundle: .main), isOn: $appState.censorContent)
@@ -62,20 +47,43 @@ private struct GeneralTab: View {
 
             // ── Permissions ─────────────────────────────────────────────────
             Section(String(localized: "Permissions", bundle: .main)) {
+                // Microphone
                 PermissionRow(
                     label: String(localized: "Microphone", bundle: .main),
                     icon: "mic.fill",
                     granted: micPermission
                 ) {
-                    AVCaptureDevice.requestAccess(for: .audio) { _ in }
+                    Task {
+                        _ = await AVAudioApplication.requestRecordPermission()
+                        checkPermissions()
+                    }
                 }
+
+                // System Audio
                 PermissionRow(
                     label: String(localized: "System Audio", bundle: .main),
                     icon: "speaker.wave.2.fill",
-                    granted: screenPermission
+                    granted: audioTapPermission
                 ) {
-                    requestScreenCapture()
+                    audioTapRequested = true
+                    requestAudioTap()
+                    // Check after a delay to give the user time to grant
+                    Task {
+                        try? await Task.sleep(for: .seconds(1))
+                        checkPermissions()
+                    }
                 }
+                if audioTapRequested && !audioTapPermission {
+                    Text(String(localized: "After granting permission in System Settings, Blabla must be relaunched.", bundle: .main))
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Button(String(localized: "Relaunch Blabla", bundle: .main)) {
+                        relaunchApp()
+                    }
+                    .controlSize(.small)
+                }
+
+                // Accessibility
                 PermissionRow(
                     label: String(localized: "Accessibility", bundle: .main),
                     icon: "accessibility",
@@ -84,54 +92,58 @@ private struct GeneralTab: View {
                     requestAccessibility()
                 }
             }
-
-            // ── About ───────────────────────────────────────────────────────
-            Section(String(localized: "About", bundle: .main)) {
-                HStack {
-                    Text(String(localized: "Core transcription engine", bundle: .main))
-                    Spacer()
-                    Link("finnvoor/yap", destination: URL(string: "https://github.com/finnvoor/yap")!)
-                        .font(.subheadline)
-                }
-                HStack {
-                    Text(String(localized: "Version", bundle: .main))
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .formStyle(.grouped)
-        .task { await loadSupportedLocales() }
-        .task { await pollPermissions() }
+        .onAppear { checkPermissions() }
+        .task { await pollLightPermissions() }
     }
 
     private func checkPermissions() {
-        micPermission = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        screenPermission = CGPreflightScreenCaptureAccess()
+        micPermission = AVAudioApplication.shared.recordPermission == .granted
+        audioTapPermission = checkAudioTapPermission()
         accessibilityPermission = AXIsProcessTrusted()
     }
 
-    private func pollPermissions() async {
+    /// Polls only lightweight permission checks (no hardware tap creation).
+    /// Audio tap permission is only checked on-demand via button or on appear.
+    private func pollLightPermissions() async {
         while !Task.isCancelled {
-            checkPermissions()
-            try? await Task.sleep(for: .seconds(2))
+            try? await Task.sleep(for: .seconds(3))
+            micPermission = AVAudioApplication.shared.recordPermission == .granted
+            accessibilityPermission = AXIsProcessTrusted()
         }
     }
 
-    private nonisolated func requestScreenCapture() {
-        Task { @Sendable in
-            let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
-            guard let display = content?.displays.first else { return }
-            // Audio-only: includingApplications with empty list triggers "System Audio Only" permission
-            let filter = SCContentFilter(display: display, including: [], exceptingWindows: [])
-            let cfg = SCStreamConfiguration()
-            cfg.capturesAudio = true
-            cfg.width = 2
-            cfg.height = 2
-            let stream = SCStream(filter: filter, configuration: cfg, delegate: nil)
-            try? await stream.startCapture()
-            try? await stream.stopCapture()
+    /// Check if we have audio tap permission by trying to create a tap.
+    /// Only called on-demand (view appear, after grant button), never in a tight poll loop.
+    private nonisolated func checkAudioTapPermission() -> Bool {
+        let tapDesc = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
+        tapDesc.name = "BlablaPermCheck"
+        tapDesc.uuid = NSUUID() as UUID
+        tapDesc.muteBehavior = .unmuted
+        tapDesc.isPrivate = true
+
+        var tapID = AudioObjectID(kAudioObjectUnknown)
+        let status = AudioHardwareCreateProcessTap(tapDesc, &tapID)
+        if status == noErr {
+            AudioHardwareDestroyProcessTap(tapID)
+            return true
+        }
+        return false
+    }
+
+    /// Request audio tap permission by creating a tap (triggers the OS permission dialog).
+    private nonisolated func requestAudioTap() {
+        let tapDesc = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
+        tapDesc.name = "BlablaPermReq"
+        tapDesc.uuid = NSUUID() as UUID
+        tapDesc.muteBehavior = .unmuted
+        tapDesc.isPrivate = true
+
+        var tapID = AudioObjectID(kAudioObjectUnknown)
+        let status = AudioHardwareCreateProcessTap(tapDesc, &tapID)
+        if status == noErr {
+            AudioHardwareDestroyProcessTap(tapID)
         }
     }
 
@@ -139,19 +151,21 @@ private struct GeneralTab: View {
         let key = "AXTrustedCheckOptionPrompt" as CFString
         let opts = [key: kCFBooleanTrue!] as CFDictionary
         AXIsProcessTrustedWithOptions(opts)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
-    private func loadSupportedLocales() async {
-        let locales = await SpeechTranscriber.supportedLocales
-        supportedLocales = Array(locales).sorted {
-            let a = $0.localizedString(forIdentifier: $0.identifier) ?? $0.identifier
-            let b = $1.localizedString(forIdentifier: $1.identifier) ?? $1.identifier
-            return a < b
-        }
-        if supportedLocales.isEmpty {
-            supportedLocales = [.current]
-        }
+    /// Relaunches the app to pick up newly granted permissions.
+    private func relaunchApp() {
+        let url = Bundle.main.bundleURL
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = ["-n", url.path]
+        try? task.run()
+        NSApplication.shared.terminate(nil)
     }
+
 }
 
 // MARK: - Dictation Tab
@@ -259,12 +273,9 @@ private struct TranscriptionTab: View {
 
 private struct HotkeyRecorderView: View {
     @Binding var hotkeyKeyRaw: String
+    @EnvironmentObject var appState: AppState
     @State private var isRecording = false
     @State private var monitor: Any?
-
-    private var currentKey: GlobalHotkeyService.HotkeyKey {
-        GlobalHotkeyService.HotkeyKey(rawValue: hotkeyKeyRaw) ?? .fn
-    }
 
     var body: some View {
         HStack {
@@ -277,11 +288,11 @@ private struct HotkeyRecorderView: View {
                     Image(systemName: "keyboard")
                         .font(.caption)
                     if isRecording {
-                        Text(String(localized: "Press a modifier key…", bundle: .main))
+                        Text(String(localized: "Press a key combination…", bundle: .main))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text(currentKey.displayName)
+                        Text(appState.hotkeyDisplayName)
                             .font(.subheadline.bold())
                     }
                 }
@@ -309,12 +320,43 @@ private struct HotkeyRecorderView: View {
     }
 
     private func installMonitor() {
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
-            for key in GlobalHotkeyService.HotkeyKey.allCases {
-                if event.modifierFlags.contains(key.modifierFlag) {
-                    hotkeyKeyRaw = key.rawValue
+        appState.hotkeyService.disable()
+        var pendingModifier: GlobalHotkeyService.HotkeyKey?
+
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { event in
+            // Escape cancels recording
+            if event.type == .keyDown && event.keyCode == 53 {
+                isRecording = false
+                return event
+            }
+
+            // Regular key pressed while a modifier is held → save as combo
+            if event.type == .keyDown {
+                for key in GlobalHotkeyService.HotkeyKey.allCases {
+                    if event.modifierFlags.contains(key.modifierFlag) {
+                        hotkeyKeyRaw = "\(key.rawValue)+\(event.keyCode)"
+                        pendingModifier = nil
+                        isRecording = false
+                        return event
+                    }
+                }
+                return event
+            }
+
+            // Modifier key pressed or released
+            if event.type == .flagsChanged {
+                // Check if a modifier was pressed
+                for key in GlobalHotkeyService.HotkeyKey.allCases {
+                    if event.modifierFlags.contains(key.modifierFlag) {
+                        pendingModifier = key
+                        return event
+                    }
+                }
+                // All modifiers released — save modifier-only if one was pending
+                if let modifier = pendingModifier {
+                    hotkeyKeyRaw = modifier.rawValue
+                    pendingModifier = nil
                     isRecording = false
-                    return event
                 }
             }
             return event
@@ -325,6 +367,7 @@ private struct HotkeyRecorderView: View {
         if let monitor {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
+            appState.hotkeyService.enable()
         }
     }
 }
@@ -366,7 +409,6 @@ extension OutputFormat {
         case .srt:  return "SRT"
         case .vtt:  return "VTT"
         case .json: return "JSON"
-        @unknown default: return rawValue.uppercased()
         }
     }
 }

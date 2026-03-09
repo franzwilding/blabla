@@ -9,13 +9,13 @@
 /* Begin PBXBuildFile section */
 		09634F4F116903C171DBA153 /* TranscriptEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 553AA4A7CB3DD8BF72976FEF /* TranscriptEntry.swift */; };
 		0F290487C17D2C3129C09390 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD94356685AF5E859EB2304 /* SettingsView.swift */; };
-		108C8CE1689C80393B3B8083 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = 121C91D50ADD6D7F29F6F32B /* ArgumentParser */; };
 		12BC3BB4892B6C7B8D439BEB /* MenuBarContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCD46E57F2234E868FC0EA65 /* MenuBarContentView.swift */; };
 		2AC2E5624EFC7012B676DE01 /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1447778D6B46F5E7732DA07C /* MenuBarLabel.swift */; };
 		2BCD73D704B73999853DBDF4 /* TranscribeFileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A550F71687A2F8B5A75417 /* TranscribeFileView.swift */; };
 		2D449E293FBF9233752A3D3C /* AttributedString+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12BC50ED10C473BC7299F5E0 /* AttributedString+Extensions.swift */; };
 		2DA37EF264BBB136D1A18CA4 /* LiveCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E821A35402065766B09792A /* LiveCaptureView.swift */; };
 		4D987909F00200C6CE89E4AA /* DictateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97185647F8AF109174851762 /* DictateService.swift */; };
+		53693B17BD43F95995C1E751 /* LiveTextOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 936B97282175A8A0B682B99B /* LiveTextOverlay.swift */; };
 		63A1365052F23775DF8289B6 /* SessionRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C895E882EB233A6B9147D7F2 /* SessionRecorder.swift */; };
 		660B62D5A9CD999CEEEDEBD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 52AA915DCF33DAC70EFEFEC8 /* Assets.xcassets */; };
 		78C47E48DA5D8F42BED63A54 /* GlobalHotkeyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B77BD5BB63F1D17576491BC9 /* GlobalHotkeyService.swift */; };
@@ -44,6 +44,7 @@
 		7274C67C555F7CCC352FA68F /* ScreenCaptureKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ScreenCaptureKit.framework; path = System/Library/Frameworks/ScreenCaptureKit.framework; sourceTree = SDKROOT; };
 		7728B6E09BBE37FDD730573D /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8DECA3F693D5F5A17FC4C794 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		936B97282175A8A0B682B99B /* LiveTextOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTextOverlay.swift; sourceTree = "<group>"; };
 		97185647F8AF109174851762 /* DictateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictateService.swift; sourceTree = "<group>"; };
 		98F37E59FE71703CD379BB4B /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionEngine.swift; sourceTree = "<group>"; };
 		B77BD5BB63F1D17576491BC9 /* GlobalHotkeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyService.swift; sourceTree = "<group>"; };
@@ -58,7 +59,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				108C8CE1689C80393B3B8083 /* ArgumentParser in Frameworks */,
 				A5231232A62F5D93671FBE8E /* ScreenCaptureKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -100,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				1E821A35402065766B09792A /* LiveCaptureView.swift */,
+				936B97282175A8A0B682B99B /* LiveTextOverlay.swift */,
 				FCD46E57F2234E868FC0EA65 /* MenuBarContentView.swift */,
 				1447778D6B46F5E7732DA07C /* MenuBarLabel.swift */,
 				0DD94356685AF5E859EB2304 /* SettingsView.swift */,
@@ -197,7 +198,6 @@
 			);
 			name = Blabla;
 			packageProductDependencies = (
-				121C91D50ADD6D7F29F6F32B /* ArgumentParser */,
 			);
 			productName = Blabla;
 			productReference = 282F2A831995926B063B78C9 /* Blabla.app */;
@@ -228,9 +228,6 @@
 			);
 			mainGroup = CBFB7C3BD463ACE1F4B1FB3A;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				89653D8CFAA469FC5B6E9D25 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
-			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -263,6 +260,7 @@
 				78C47E48DA5D8F42BED63A54 /* GlobalHotkeyService.swift in Sources */,
 				B653023D4542F24CFF663F36 /* ListenService.swift in Sources */,
 				2DA37EF264BBB136D1A18CA4 /* LiveCaptureView.swift in Sources */,
+				53693B17BD43F95995C1E751 /* LiveTextOverlay.swift in Sources */,
 				12BC3BB4892B6C7B8D439BEB /* MenuBarContentView.swift in Sources */,
 				2AC2E5624EFC7012B676DE01 /* MenuBarLabel.swift in Sources */,
 				B6C3EF57020030DB54CFDFCE /* OutputFormat.swift in Sources */,
@@ -306,7 +304,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = at.co.unite.blabla;
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blabla.app;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};
@@ -391,7 +390,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				PRODUCT_BUNDLE_IDENTIFIER = at.co.unite.blabla;
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.blabla.app;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
 			};
@@ -475,25 +475,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		89653D8CFAA469FC5B6E9D25 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		121C91D50ADD6D7F29F6F32B /* ArgumentParser */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 89653D8CFAA469FC5B6E9D25 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
-			productName = ArgumentParser;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8848C0717779DC5BB49C0BCF /* Project object */;
 }

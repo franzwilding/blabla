@@ -78,9 +78,9 @@ struct LiveCaptureView: View {
         HStack(spacing: 5) {
             Image(systemName: "keyboard")
                 .font(.caption2)
-            Text(appState.hotkeyService.hotkeyState == .activeUndecided
+            Text(appState.hotkeyService.hotkeyState == .held
                  ? String(localized: "\(appState.hotkeyKey.displayName) Hold", bundle: .main)
-                 : String(localized: "\(appState.hotkeyKey.displayName) Toggle", bundle: .main))
+                 : String(localized: "\(appState.hotkeyKey.displayName) Dictation", bundle: .main))
                 .font(.caption.bold())
         }
         .padding(.horizontal, 10)

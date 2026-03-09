@@ -1,8 +1,6 @@
-# YapMenuBar
+# Blabla
 
 On-device speech transcription as a macOS Menu Bar app.
-
-The core transcription engine is pulled directly from the [yap](https://github.com/finnvoor/yap) git submodule via symlinks — no forking, no copying.
 
 ## Requirements
 
@@ -13,8 +11,7 @@ The core transcription engine is pulled directly from the [yap](https://github.c
 
 ```bash
 git clone <repo-url>
-cd YapMenuBar
-make setup
+cd Blabla
 make open
 ```
 
@@ -22,33 +19,25 @@ make open
 
 | Command | Description |
 |---|---|
-| `make setup` | First-time setup after `git clone` — initializes submodules |
 | `make build` | Build the app (debug) via `swift build` |
 | `make run` | Run directly (debug build, no `.app` bundle) |
 | `make open` | Open the project in Xcode via `Package.swift` |
-| `make update-yap` | Pull latest changes from the yap upstream repo |
 | `make clean` | Clean build artifacts |
 
 ## Project structure
 
 ```
-YapMenuBar/
-├── Sources/YapMenuBar/
-│   ├── App/          # App entry point
+Blabla/
+├── Sources/Blabla/
+│   ├── App/          # App entry point & state
 │   ├── Models/       # Data models
 │   ├── Services/     # Business logic / transcription services
 │   ├── Views/        # SwiftUI views
-│   └── YapSources/   # Symlinks into the yap submodule
-├── yap/              # Git submodule (finnvoor/yap)
+│   └── YapSources/   # Transcription engine (see credits)
 ├── Package.swift
 └── Makefile
 ```
 
-## Updating yap
+## Credits
 
-The transcription core (`TranscriptionEngine`, `OutputFormat`, `AttributedString+Extensions`) lives in the `yap` submodule. To pull upstream changes:
-
-```bash
-make update-yap
-make build
-```
+The transcription engine (`TranscriptionEngine`, `OutputFormat`, `AttributedString+Extensions`) is based on [yap](https://github.com/finnvoor/yap) by [Finn Voorhees](https://github.com/finnvoor).

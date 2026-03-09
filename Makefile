@@ -1,6 +1,6 @@
 # Blabla — common development tasks
 
-.PHONY: build run update-yap open clean
+.PHONY: build run open clean test
 
 ## Build the app (debug)
 build:
@@ -10,20 +10,14 @@ build:
 run:
 	swift run Blabla
 
-## Pull latest changes from the yap upstream repo
-update-yap:
-	git submodule update --remote yap
-	@echo "yap updated. Run 'make build' to recompile."
-
 ## Open the project in Xcode (via Package.swift)
 open:
 	open Package.swift
 
+## Run tests
+test:
+	swift test
+
 ## Clean build artifacts
 clean:
 	swift package clean
-
-## First-time setup after git clone
-setup:
-	git submodule update --init --recursive
-	@echo "Submodules initialized. Run 'make open' to open in Xcode."

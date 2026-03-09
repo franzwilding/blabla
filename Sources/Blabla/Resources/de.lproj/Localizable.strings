@@ -10,15 +10,11 @@
 "Content" = "Inhalt";
 "Censor sensitive words" = "Sensible Wörter zensieren";
 "Hotkey" = "Hotkey";
-"Press a modifier key…" = "Modifier-Taste drücken…";
+"Press a key combination…" = "Tastenkombination drücken…";
 "Permissions" = "Berechtigungen";
 "Microphone" = "Mikrofon";
-"Screen Recording" = "Bildschirmaufnahme";
 "Accessibility" = "Bedienungshilfen";
 "Grant" = "Erlauben";
-"About" = "Über";
-"Core transcription engine" = "Transkriptions-Engine";
-"Version" = "Version";
 
 /* Dictation Tab */
 "Automatic punctuation" = "Automatische Interpunktion";
@@ -69,3 +65,22 @@
 "No results" = "Keine Ergebnisse";
 "%lld transcripts" = "%lld Transkripte";
 "Clear All" = "Alle löschen";
+
+/* Capture Mode Labels */
+"Live" = "Live";
+"System Audio + Dictation" = "Systemaudio + Diktieren";
+
+/* Menu Bar Shortcuts */
+"HOLD" = "HALTEN";
+"PRESS" = "DRÜCKEN";
+
+/* Error Messages */
+"File not found: %@" = "Datei nicht gefunden: %@";
+"SpeechTranscriber is not available on this device." = "Die Spracherkennung ist auf diesem Gerät nicht verfügbar.";
+"Locale \"%@\" is not supported for speech transcription." = "Die Sprache \"%@\" wird für die Sprachtranskription nicht unterstützt.";
+"Speech transcription is not available on this device." = "Die Sprachtranskription ist auf diesem Gerät nicht verfügbar.";
+"Locale \"%@\" is not supported for transcription." = "Die Sprache \"%@\" wird für die Transkription nicht unterstützt.";
+"No compatible audio format available for speech recognition." = "Kein kompatibles Audioformat für die Spracherkennung verfügbar.";
+"System Audio permission required. Enable it in System Settings → Privacy & Security → System Audio Recording, then relaunch Blabla." = "Systemaudio-Berechtigung erforderlich. Aktiviere sie in Systemeinstellungen → Datenschutz & Sicherheit → Systemaudioaufnahme und starte Blabla neu.";
+"Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch Blabla." = "Bildschirmaufnahme-Berechtigung erforderlich. Aktiviere sie in Systemeinstellungen → Datenschutz & Sicherheit → Bildschirmaufnahme und starte Blabla neu.";
+"Microphone access denied. Enable it in System Settings → Privacy & Security → Microphone." = "Mikrofonzugriff verweigert. Aktiviere ihn in Systemeinstellungen → Datenschutz & Sicherheit → Mikrofon.";

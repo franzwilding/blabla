@@ -10,15 +10,11 @@
 "Content" = "Content";
 "Censor sensitive words" = "Censor sensitive words";
 "Hotkey" = "Hotkey";
-"Press a modifier key…" = "Press a modifier key…";
+"Press a key combination…" = "Press a key combination…";
 "Permissions" = "Permissions";
 "Microphone" = "Microphone";
-"Screen Recording" = "Screen Recording";
 "Accessibility" = "Accessibility";
 "Grant" = "Grant";
-"About" = "About";
-"Core transcription engine" = "Core transcription engine";
-"Version" = "Version";
 
 /* Dictation Tab */
 "Automatic punctuation" = "Automatic punctuation";
@@ -69,3 +65,22 @@
 "No results" = "No results";
 "%lld transcripts" = "%lld transcripts";
 "Clear All" = "Clear All";
+
+/* Capture Mode Labels */
+"Live" = "Live";
+"System Audio + Dictation" = "System Audio + Dictation";
+
+/* Menu Bar Shortcuts */
+"HOLD" = "HOLD";
+"PRESS" = "PRESS";
+
+/* Error Messages */
+"File not found: %@" = "File not found: %@";
+"SpeechTranscriber is not available on this device." = "SpeechTranscriber is not available on this device.";
+"Locale \"%@\" is not supported for speech transcription." = "Locale \"%@\" is not supported for speech transcription.";
+"Speech transcription is not available on this device." = "Speech transcription is not available on this device.";
+"Locale \"%@\" is not supported for transcription." = "Locale \"%@\" is not supported for transcription.";
+"No compatible audio format available for speech recognition." = "No compatible audio format available for speech recognition.";
+"System Audio permission required. Enable it in System Settings → Privacy & Security → System Audio Recording, then relaunch Blabla." = "System Audio permission required. Enable it in System Settings → Privacy & Security → System Audio Recording, then relaunch Blabla.";
+"Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch Blabla." = "Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch Blabla.";
+"Microphone access denied. Enable it in System Settings → Privacy & Security → Microphone." = "Microphone access denied. Enable it in System Settings → Privacy & Security → Microphone.";

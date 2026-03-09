@@ -1,11 +1,11 @@
-// ListenService — transcribes live system audio via ScreenCaptureKit + SpeechAnalyzer.
-// The AudioCaptureDelegate below mirrors the AudioStreamDelegate class in yap's Listen.swift,
-// adapted for use as a library service rather than a CLI command.
+// ListenService — transcribes live system audio via Core Audio taps + SpeechAnalyzer.
+// Uses CATapDescription to capture system audio, which triggers the "System Audio Only"
+// permission instead of "Screen & System Audio Recording".
 
 @preconcurrency import AVFoundation
 import Combine
+import CoreAudio
 import CoreMedia
-@preconcurrency import ScreenCaptureKit
 import Speech
 
 // MARK: - ListenService
@@ -17,15 +17,21 @@ final class ListenService: ObservableObject {
 
     @Published var state: State = .idle
     @Published var liveFragment: String = ""
+    @Published var liveSegments: [OutputFormat.Segment] = []
 
     /// Called with the raw source-format PCM buffer for each audio chunk (before conversion).
-    var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
+    /// Can be set after `start()` — the tap reads it dynamically via the shared box.
+    var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)? {
+        get { audioCallbackBox.callback }
+        set { audioCallbackBox.callback = newValue }
+    }
+    private let audioCallbackBox = SendableCallbackBox()
 
-    private var captureStream: SCStream?
     private var analyzer: SpeechAnalyzer?
     private var transcriber: SpeechTranscriber?
     private var inputContinuation: AsyncStream<AnalyzerInput>.Continuation?
     private var resultsTask: Task<Void, Never>?
+    private var audioTap: SystemAudioTap?
 
     // MARK: - Start
 
@@ -68,48 +74,34 @@ final class ListenService: ObservableObject {
             throw ListenError.noCompatibleAudioFormat
         }
 
-        // ScreenCaptureKit for system audio (audio-only capture)
-        let content: SCShareableContent
-        do {
-            content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
-        } catch {
-            state = .idle
-            throw ListenError.screenRecordingPermissionDenied
-        }
-
-        guard let display = content.displays.first else {
-            state = .idle
-            throw ListenError.screenRecordingPermissionDenied
-        }
-
         let (inputSeq, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
         inputContinuation = continuation
 
-        let cfg = SCStreamConfiguration()
-        cfg.capturesAudio               = true
-        cfg.sampleRate                  = Int(targetFormat.sampleRate)
-        cfg.channelCount                = Int(targetFormat.channelCount)
-        cfg.excludesCurrentProcessAudio = true
-        cfg.width                       = 2
-        cfg.height                      = 2
-        cfg.minimumFrameInterval        = CMTime(value: 1, timescale: 1)
-
-        let delegate = AudioCaptureDelegate(targetFormat: targetFormat, continuation: continuation)
-        delegate.onSourceBuffer = self.onAudioBuffer
-        // Use includingApplications with empty list: captures no screen content, only system audio
-        let filter   = SCContentFilter(display: display, including: [], exceptingWindows: [])
-        let stream   = SCStream(filter: filter, configuration: cfg, delegate: nil)
-        try stream.addStreamOutput(delegate, type: .audio, sampleHandlerQueue: .global())
-
+        // Create Core Audio tap for system audio capture
+        let tap: SystemAudioTap
         do {
-            try await stream.startCapture()
+            tap = try SystemAudioTap(targetFormat: targetFormat)
         } catch {
             state = .idle
             inputContinuation?.finish()
-            throw ListenError.screenRecordingPermissionDenied
+            throw ListenError.audioTapCreationFailed
         }
 
-        captureStream = stream
+        let callbackBox = self.audioCallbackBox
+        tap.onBuffer = { buffer, converted in
+            callbackBox.callback?(buffer)
+            continuation.yield(AnalyzerInput(buffer: converted))
+        }
+
+        do {
+            try tap.start()
+        } catch {
+            state = .idle
+            inputContinuation?.finish()
+            throw ListenError.audioTapCreationFailed
+        }
+
+        audioTap = tap
 
         let speechAnalyzer = SpeechAnalyzer(modules: modules)
         try await speechAnalyzer.start(inputSequence: inputSeq)
@@ -118,10 +110,7 @@ final class ListenService: ObservableObject {
         state       = .running
 
         resultsTask = Task { [weak self] in
-            // Track segments by start time to handle volatile→finalized transitions
-            // without duplication. Volatile results update in-place, finalized results
-            // replace their volatile predecessor for the same time range.
-            var segments: [(start: CMTime, text: String)] = []
+            var segments: [(range: CMTimeRange, text: String)] = []
 
             do {
                 guard let transcriber = self?.transcriber else { return }
@@ -129,17 +118,19 @@ final class ListenService: ObservableObject {
                     let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { continue }
 
-                    let start = result.range.start
-                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.start, start) == 0 }) {
+                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.range.start, result.range.start) == 0 }) {
                         segments[idx].text = text
+                        segments[idx].range = result.range
                     } else {
-                        segments.append((start, text))
+                        segments.append((result.range, text))
                     }
 
                     let display = segments.map(\.text).joined(separator: " ")
+                    let segs = segments.map { OutputFormat.Segment(timeRange: $0.range, text: $0.text) }
                     await MainActor.run {
                         guard let self else { return }
                         self.liveFragment = display
+                        self.liveSegments = segs
                     }
                 }
             } catch {
@@ -147,6 +138,7 @@ final class ListenService: ObservableObject {
             }
             await MainActor.run {
                 self?.liveFragment = ""
+                self?.liveSegments = []
                 if self?.state == .stopping { self?.state = .idle }
             }
         }
@@ -157,12 +149,11 @@ final class ListenService: ObservableObject {
     func stop() async throws {
         guard state == .running else { return }
         state = .stopping
-        try? await captureStream?.stopCapture()
+        audioTap?.stop()
         inputContinuation?.finish()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
-        // Wait for the results task to finish processing (don't cancel it)
         await resultsTask?.value
-        captureStream     = nil
+        audioTap          = nil
         analyzer          = nil
         transcriber       = nil
         inputContinuation = nil
@@ -171,58 +162,192 @@ final class ListenService: ObservableObject {
     }
 }
 
-// MARK: - AudioCaptureDelegate
-// Mirrors yap's AudioStreamDelegate — converts ScreenCaptureKit audio buffers to the
-// format expected by SpeechAnalyzer and forwards them via the async stream continuation.
+// MARK: - SystemAudioTap
+// Captures system audio using Core Audio's CATapDescription API.
+// This triggers the "System Audio Only" permission instead of "Screen & System Audio Recording".
 
-private final class AudioCaptureDelegate: NSObject, SCStreamOutput, @unchecked Sendable {
+/// Context passed through the IOProc's clientData pointer.
+private final class TapIOContext {
+    let sourceFormat: AVAudioFormat
     let targetFormat: AVAudioFormat
-    let continuation: AsyncStream<AnalyzerInput>.Continuation
-    var converter: AVAudioConverter?
-    var onSourceBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
+    let converter: AVAudioConverter
+    var onBuffer: ((_ source: AVAudioPCMBuffer, _ converted: AVAudioPCMBuffer) -> Void)?
 
-    init(targetFormat: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation) {
+    init(sourceFormat: AVAudioFormat, targetFormat: AVAudioFormat, converter: AVAudioConverter) {
+        self.sourceFormat = sourceFormat
         self.targetFormat = targetFormat
-        self.continuation = continuation
+        self.converter = converter
     }
+}
 
-    func stream(_: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        guard type == .audio,
-              sampleBuffer.isValid,
-              sampleBuffer.numSamples > 0 else { return }
+private final class SystemAudioTap: @unchecked Sendable {
+    let targetFormat: AVAudioFormat
+    private var tapID: AudioObjectID = AudioObjectID(kAudioObjectUnknown)
+    private var aggregateDeviceID: AudioObjectID = AudioObjectID(kAudioObjectUnknown)
+    private var ioProcID: AudioDeviceIOProcID?
+    private var ioContext: TapIOContext?
+    private var retainedContext: Unmanaged<TapIOContext>?
+    private let tapUUID = UUID()
 
-        guard let desc = sampleBuffer.formatDescription,
-              let asbd = desc.audioStreamBasicDescription,
-              let sourceFormat = AVAudioFormat(
-                  standardFormatWithSampleRate: asbd.mSampleRate,
-                  channels: asbd.mChannelsPerFrame
-              ) else { return }
+    /// Called with (sourceBuffer, convertedBuffer) for each audio chunk.
+    var onBuffer: ((_ source: AVAudioPCMBuffer, _ converted: AVAudioPCMBuffer) -> Void)?
 
-        if converter == nil || converter?.inputFormat != sourceFormat {
-            converter = AVAudioConverter(from: sourceFormat, to: targetFormat)
+    init(targetFormat: AVAudioFormat) throws {
+        self.targetFormat = targetFormat
+
+        // Create a global stereo tap excluding the current process
+        let tapDesc = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
+        tapDesc.name = "BlablaTap"
+        tapDesc.uuid = NSUUID(uuidString: tapUUID.uuidString)! as UUID
+        tapDesc.muteBehavior = .unmuted
+        tapDesc.isPrivate = true
+
+        var newTapID = AudioObjectID(kAudioObjectUnknown)
+        let status = AudioHardwareCreateProcessTap(tapDesc, &newTapID)
+        guard status == noErr else {
+            throw ListenError.audioTapCreationFailed
         }
-        guard let converter else { return }
+        tapID = newTapID
 
-        do {
-            try sampleBuffer.withAudioBufferList { abl, _ in
-                guard let source = AVAudioPCMBuffer(pcmFormat: sourceFormat, bufferListNoCopy: abl.unsafePointer) else { return }
-                onSourceBuffer?(source)
-                let capacity = AVAudioFrameCount(ceil(Double(source.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate))
-                guard let converted = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
+        // Create aggregate device that includes the tap
+        let aggDesc: [String: Any] = [
+            kAudioAggregateDeviceNameKey: "BlablaAggregateDevice",
+            kAudioAggregateDeviceUIDKey: "com.blabla.aggregate.\(UUID().uuidString)",
+            kAudioAggregateDeviceSubDeviceListKey: [] as [Any],
+            kAudioAggregateDeviceTapListKey: [
+                [kAudioSubTapUIDKey: tapUUID.uuidString]
+            ],
+            kAudioAggregateDeviceTapAutoStartKey: false,
+            kAudioAggregateDeviceIsPrivateKey: true,
+        ]
 
-                var err: NSError?
-                nonisolated(unsafe) var consumed = false
-                nonisolated(unsafe) let buf = source
-                converter.convert(to: converted, error: &err) { _, status in
-                    if consumed { status.pointee = .noDataNow; return nil }
-                    consumed = true; status.pointee = .haveData; return buf
-                }
-                if err == nil, converted.frameLength > 0 {
-                    continuation.yield(AnalyzerInput(buffer: converted))
-                }
-            }
-        } catch {}
+        var newAggID = AudioObjectID(kAudioObjectUnknown)
+        let aggStatus = AudioHardwareCreateAggregateDevice(aggDesc as CFDictionary, &newAggID)
+        guard aggStatus == noErr else {
+            AudioHardwareDestroyProcessTap(tapID)
+            throw ListenError.audioTapCreationFailed
+        }
+        aggregateDeviceID = newAggID
     }
+
+    func start() throws {
+        // Get the tap's stream format
+        let sourceFormat = getTapStreamFormat() ?? AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 2)!
+        guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+            throw ListenError.noCompatibleAudioFormat
+        }
+
+        let context = TapIOContext(sourceFormat: sourceFormat, targetFormat: targetFormat, converter: converter)
+        context.onBuffer = onBuffer
+        ioContext = context
+
+        // Retain context for the C callback
+        let retained = Unmanaged.passRetained(context)
+        retainedContext = retained
+        let clientData = retained.toOpaque()
+
+        var procID: AudioDeviceIOProcID?
+        let status = AudioDeviceCreateIOProcID(aggregateDeviceID, systemAudioIOProc, clientData, &procID)
+        guard status == noErr, let procID else {
+            retained.release()
+            retainedContext = nil
+            throw ListenError.audioTapCreationFailed
+        }
+        ioProcID = procID
+
+        let startStatus = AudioDeviceStart(aggregateDeviceID, procID)
+        guard startStatus == noErr else {
+            AudioDeviceDestroyIOProcID(aggregateDeviceID, procID)
+            retained.release()
+            retainedContext = nil
+            throw ListenError.audioTapCreationFailed
+        }
+    }
+
+    func stop() {
+        if let ioProcID {
+            AudioDeviceStop(aggregateDeviceID, ioProcID)
+            AudioDeviceDestroyIOProcID(aggregateDeviceID, ioProcID)
+            self.ioProcID = nil
+        }
+        if let retainedContext {
+            retainedContext.release()
+            self.retainedContext = nil
+        }
+        ioContext = nil
+        if aggregateDeviceID != AudioObjectID(kAudioObjectUnknown) {
+            AudioHardwareDestroyAggregateDevice(aggregateDeviceID)
+            aggregateDeviceID = AudioObjectID(kAudioObjectUnknown)
+        }
+        if tapID != AudioObjectID(kAudioObjectUnknown) {
+            AudioHardwareDestroyProcessTap(tapID)
+            tapID = AudioObjectID(kAudioObjectUnknown)
+        }
+    }
+
+    deinit {
+        stop()
+    }
+
+    private func getTapStreamFormat() -> AVAudioFormat? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreamFormat,
+            mScope: kAudioDevicePropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var asbd = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+
+        let status = AudioObjectGetPropertyData(aggregateDeviceID, &address, 0, nil, &size, &asbd)
+        guard status == noErr else { return nil }
+
+        return AVAudioFormat(streamDescription: &asbd)
+    }
+}
+
+/// C-compatible IOProc callback for the aggregate audio device.
+private func systemAudioIOProc(
+    _: AudioObjectID,
+    _: UnsafePointer<AudioTimeStamp>,
+    inInputData: UnsafePointer<AudioBufferList>,
+    _: UnsafePointer<AudioTimeStamp>,
+    _: UnsafeMutablePointer<AudioBufferList>,
+    _: UnsafePointer<AudioTimeStamp>,
+    inClientData: UnsafeMutableRawPointer?
+) -> OSStatus {
+    guard let inClientData else { return noErr }
+    let ctx = Unmanaged<TapIOContext>.fromOpaque(inClientData).takeUnretainedValue()
+
+    let abl = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: inInputData))
+    guard abl.count > 0, abl[0].mDataByteSize > 0 else { return noErr }
+
+    guard let source = AVAudioPCMBuffer(pcmFormat: ctx.sourceFormat, bufferListNoCopy: inInputData) else { return noErr }
+
+    let ratio = ctx.targetFormat.sampleRate / ctx.sourceFormat.sampleRate
+    let capacity = AVAudioFrameCount(ceil(Double(source.frameLength) * ratio))
+    guard capacity > 0, let converted = AVAudioPCMBuffer(pcmFormat: ctx.targetFormat, frameCapacity: capacity) else { return noErr }
+
+    var err: NSError?
+    nonisolated(unsafe) var consumed = false
+    nonisolated(unsafe) let buf = source
+    ctx.converter.convert(to: converted, error: &err) { _, status in
+        if consumed { status.pointee = .noDataNow; return nil }
+        consumed = true; status.pointee = .haveData; return buf
+    }
+
+    if err == nil, converted.frameLength > 0 {
+        ctx.onBuffer?(source, converted)
+    }
+
+    return noErr
+}
+
+// MARK: - SendableCallbackBox
+
+/// Thread-safe box so audio callbacks can be set after the tap has started.
+final class SendableCallbackBox: @unchecked Sendable {
+    var callback: (@Sendable (AVAudioPCMBuffer) -> Void)?
 }
 
 // MARK: - Errors
@@ -231,18 +356,21 @@ enum ListenError: LocalizedError {
     case speechNotAvailable
     case unsupportedLocale(String)
     case noCompatibleAudioFormat
+    case audioTapCreationFailed
     case screenRecordingPermissionDenied
 
     var errorDescription: String? {
         switch self {
         case .speechNotAvailable:
-            return "Speech transcription is not available on this device."
+            return String(localized: "Speech transcription is not available on this device.", bundle: .main)
         case .unsupportedLocale(let id):
-            return "Locale \"\(id)\" is not supported for transcription."
+            return String(localized: "Locale \"\(id)\" is not supported for transcription.", bundle: .main)
         case .noCompatibleAudioFormat:
-            return "No compatible audio format available for speech recognition."
+            return String(localized: "No compatible audio format available for speech recognition.", bundle: .main)
+        case .audioTapCreationFailed:
+            return String(localized: "System Audio permission required. Enable it in System Settings → Privacy & Security → System Audio Recording, then relaunch Blabla.", bundle: .main)
         case .screenRecordingPermissionDenied:
-            return "Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch YapBar."
+            return String(localized: "Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch Blabla.", bundle: .main)
         }
     }
 }

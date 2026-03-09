@@ -1,6 +1,7 @@
 import Combine
 import CoreGraphics
 import Foundation
+import Speech
 import SwiftUI
 
 // MARK: - AppState
@@ -48,11 +49,27 @@ final class AppState: ObservableObject {
         didSet {
             UserDefaults.standard.set(hotkeyKeyRaw, forKey: "hotkeyKey")
             hotkeyService.hotkeyKey = hotkeyKey
+            hotkeyService.hotkeyKeyCode = hotkeyKeyCode
         }
     }
 
     var hotkeyKey: GlobalHotkeyService.HotkeyKey {
-        GlobalHotkeyService.HotkeyKey(rawValue: hotkeyKeyRaw) ?? .fn
+        let parts = hotkeyKeyRaw.split(separator: "+")
+        return GlobalHotkeyService.HotkeyKey(rawValue: String(parts.first ?? "fn")) ?? .fn
+    }
+
+    var hotkeyKeyCode: UInt16? {
+        let parts = hotkeyKeyRaw.split(separator: "+")
+        guard parts.count > 1, let code = UInt16(parts[1]) else { return nil }
+        return code
+    }
+
+    var hotkeyDisplayName: String {
+        var name = hotkeyKey.displayName
+        if let keyCode = hotkeyKeyCode {
+            name += " + " + GlobalHotkeyService.displayName(forKeyCode: keyCode)
+        }
+        return name
     }
     @Published var dictationPunctuation: Bool {
         didSet { UserDefaults.standard.set(dictationPunctuation, forKey: "dictationPunctuation") }
@@ -105,9 +122,13 @@ final class AppState: ObservableObject {
     let listenService = ListenService()
     let dictateService = DictateService()
     let hotkeyService = GlobalHotkeyService()
+    let liveTextOverlay = LiveTextOverlayController()
     private var sessionRecorder: SessionRecorder?
+    private var startTask: Task<Void, Never>?
 
     // MARK: - Transcript history
+
+    @Published var supportedLocales: [Locale] = []
 
     @Published var history: [TranscriptEntry] = [] {
         didSet { saveHistory() }
@@ -117,7 +138,7 @@ final class AppState: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
-        selectedLocaleIdentifier = defaults.string(forKey: "selectedLocale") ?? Locale.current.identifier
+        selectedLocaleIdentifier = defaults.string(forKey: "selectedLocale") ?? "de_DE"
         censorContent            = defaults.bool(forKey: "censorContent")
         outputFormatRaw          = defaults.string(forKey: "outputFormat") ?? OutputFormat.vtt.rawValue
         maxSentenceLength        = defaults.integer(forKey: "maxSentenceLength").nonzero(default: 40)
@@ -135,6 +156,22 @@ final class AppState: ObservableObject {
         loadHistory()
         observeServices()
         setupHotkeyService()
+        liveTextOverlay.attach(to: self)
+        Task { await loadSupportedLocales() }
+    }
+
+    // MARK: - Supported locales
+
+    private func loadSupportedLocales() async {
+        let locales = await SpeechTranscriber.supportedLocales
+        supportedLocales = Array(locales).sorted {
+            let a = $0.localizedString(forIdentifier: $0.identifier) ?? $0.identifier
+            let b = $1.localizedString(forIdentifier: $1.identifier) ?? $1.identifier
+            return a < b
+        }
+        if supportedLocales.isEmpty {
+            supportedLocales = [.current]
+        }
     }
 
     // MARK: - Capture actions
@@ -154,15 +191,19 @@ final class AppState: ObservableObject {
 
     func startDictating() async {
         guard captureMode == .idle else { return }
-        hotkeyService.resetToIdle()
         liveText = ""
         clearError()
-        do {
-            try await dictateService.start(locale: selectedLocale, censor: censorContent)
-            captureMode = .dictating
-        } catch {
-            errorMessage = error.localizedDescription
+        let task = Task { @MainActor in
+            do {
+                try await dictateService.start(locale: selectedLocale, censor: censorContent)
+                captureMode = .dictating
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
+        startTask = task
+        await task.value
+        startTask = nil
     }
 
     func startBoth() async {
@@ -182,7 +223,10 @@ final class AppState: ObservableObject {
     }
 
     func stopCapture() async {
-        let wasDictating = !labelSources && captureMode == .both
+        // Wait for any in-flight start to complete before stopping
+        await startTask?.value
+
+        let wasDictating = !labelSources && (captureMode == .both || captureMode == .dictating)
         let wasTranscribing = labelSources
         let source = captureMode.label
         captureMode = .idle
@@ -212,7 +256,13 @@ final class AppState: ObservableObject {
 
         // Reveal transcript file in Finder (only for transcript mode)
         if wasTranscribing, let transcriptURL {
-            NSWorkspace.shared.activateFileViewerSelecting([transcriptURL])
+            let folder = transcriptURL.deletingLastPathComponent()
+            if FileManager.default.fileExists(atPath: transcriptURL.path) {
+                NSWorkspace.shared.activateFileViewerSelecting([transcriptURL])
+            } else {
+                try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                NSWorkspace.shared.open(folder)
+            }
         }
     }
 
@@ -242,6 +292,12 @@ final class AppState: ObservableObject {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
+    func openTranscriptsFolder() {
+        let folder = defaultFolderURL
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(folder)
+    }
+
     func clearError() { errorMessage = nil }
 
     func deleteHistoryEntry(_ entry: TranscriptEntry) {
@@ -253,6 +309,7 @@ final class AppState: ObservableObject {
     // MARK: - Private
 
     private func observeServices() {
+        // Plain text for UI display, dictation, and history
         listenService.$liveFragment
             .combineLatest(dictateService.$liveFragment)
             .receive(on: RunLoop.main)
@@ -267,21 +324,48 @@ final class AppState: ObservableObject {
                 }
                 guard !parts.isEmpty else { return }
                 self.liveText = parts.joined(separator: "\n")
-                self.sessionRecorder?.writeText(self.liveText)
+                // For plain text format, write directly
+                if self.outputFormat == .txt {
+                    self.sessionRecorder?.writeText(self.liveText)
+                }
+            }
+            .store(in: &cancellables)
+
+        // Formatted segments for SRT/VTT/JSON file output (with timestamps)
+        listenService.$liveSegments
+            .combineLatest(dictateService.$liveSegments)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] listenSegs, dictateSegs in
+                guard let self, self.outputFormat != .txt else { return }
+                guard !(listenSegs.isEmpty && dictateSegs.isEmpty) else { return }
+
+                var allSegments: [OutputFormat.Segment] = []
+                for seg in listenSegs {
+                    var s = seg
+                    if self.labelSources { s.speaker = "System" }
+                    allSegments.append(s)
+                }
+                for seg in dictateSegs {
+                    var s = seg
+                    if self.labelSources { s.speaker = "Mic" }
+                    allSegments.append(s)
+                }
+                allSegments.sort { $0.timeRange.start.seconds < $1.timeRange.start.seconds }
+
+                let formatted = self.outputFormat.formatSegments(allSegments, locale: self.selectedLocale)
+                self.sessionRecorder?.writeText(formatted)
             }
             .store(in: &cancellables)
     }
 
     private func setupHotkeyService() {
         hotkeyService.hotkeyKey = hotkeyKey
-        hotkeyService.onStartBoth = { [weak self] in
-            await self?.startBoth()
+        hotkeyService.hotkeyKeyCode = hotkeyKeyCode
+        hotkeyService.onStartDictation = { [weak self] in
+            await self?.startDictating()
         }
-        hotkeyService.onStopCapture = { [weak self] in
+        hotkeyService.onStopDictation = { [weak self] in
             await self?.stopCapture()
-        }
-        hotkeyService.onEnableSpeakerLabels = { [weak self] in
-            self?.labelSources = true
         }
         hotkeyService.enable()
     }
@@ -385,13 +469,13 @@ private extension Int {
     func nonzero(default value: Int) -> Int { self == 0 ? value : self }
 }
 
-private extension AppState.CaptureMode {
+extension AppState.CaptureMode {
     var label: String {
         switch self {
-        case .idle: return "Live"
-        case .listening: return "System Audio"
-        case .dictating: return "Dictation"
-        case .both: return "System Audio + Dictation"
+        case .idle: return String(localized: "Live", bundle: .main)
+        case .listening: return String(localized: "System Audio", bundle: .main)
+        case .dictating: return String(localized: "Dictation", bundle: .main)
+        case .both: return String(localized: "System Audio + Dictation", bundle: .main)
         }
     }
 }

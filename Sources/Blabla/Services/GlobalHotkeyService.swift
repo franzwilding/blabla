@@ -45,32 +45,34 @@ final class GlobalHotkeyService: ObservableObject {
 
     enum HotkeyState: Equatable {
         case idle
-        case activeUndecided   // key pressed, capture started, waiting to see tap vs hold
-        case toggleActive      // Tap detected, recording with speaker labels
+        case held   // key held down, dictation active
     }
 
     @Published var hotkeyState: HotkeyState = .idle
 
     // MARK: - Callbacks (set by AppState)
 
-    var onStartBoth: (() async -> Void)?
-    var onStopCapture: (() async -> Void)?
-    var onEnableSpeakerLabels: (() -> Void)?
+    var onStartDictation: (() async -> Void)?
+    var onStopDictation: (() async -> Void)?
 
     // MARK: - Configuration
 
     /// Which modifier key triggers the hotkey.
     var hotkeyKey: HotkeyKey = .fn
 
-    /// Minimum hold duration (seconds) to distinguish hold from tap.
-    private let holdThreshold: TimeInterval = 0.3
+    /// Optional regular key code for a modifier+key combination (e.g. Ctrl+D).
+    /// When nil, the hotkey triggers on the modifier key alone.
+    var hotkeyKeyCode: UInt16?
 
     // MARK: - Private state
 
-    private var fnPressTimestamp: Date?
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var isEnabled = false
+
+    // MARK: - Init
+
+    init() {}
 
     // MARK: - Enable / Disable
 
@@ -88,24 +90,30 @@ final class GlobalHotkeyService: ObservableObject {
         // If we were in the middle of a hotkey action, cancel it
         if hotkeyState != .idle {
             hotkeyState = .idle
-            Task { await onStopCapture?() }
+            Task { await onStopDictation?() }
         }
     }
 
     // MARK: - Monitor installation
 
     private func installMonitors() {
+        // When a key combo is set, also monitor keyDown/keyUp (requires Accessibility).
+        // When modifier-only, just flagsChanged is enough.
+        let eventMask: NSEvent.EventTypeMask = hotkeyKeyCode != nil
+            ? [.flagsChanged, .keyDown, .keyUp]
+            : .flagsChanged
+
         // Global monitor — fires when app is NOT focused
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: eventMask) { [weak self] event in
             Task { @MainActor in
-                self?.handleFlagsChanged(event)
+                self?.handleEvent(event)
             }
         }
 
         // Local monitor — fires when app IS focused (e.g. popover open)
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: eventMask) { [weak self] event in
             Task { @MainActor in
-                self?.handleFlagsChanged(event)
+                self?.handleEvent(event)
             }
             return event
         }
@@ -124,40 +132,38 @@ final class GlobalHotkeyService: ObservableObject {
 
     // MARK: - Event handling
 
-    private func handleFlagsChanged(_ event: NSEvent) {
-        let keyPressed = event.modifierFlags.contains(hotkeyKey.modifierFlag)
+    private func handleEvent(_ event: NSEvent) {
+        if let keyCode = hotkeyKeyCode {
+            // Combo mode: modifier + regular key
+            if event.type == .keyDown && event.keyCode == keyCode
+                && event.modifierFlags.contains(hotkeyKey.modifierFlag) {
+                processKeyState(pressed: true)
+            } else if event.type == .keyUp && event.keyCode == keyCode {
+                processKeyState(pressed: false)
+            }
+        } else {
+            // Modifier-only mode (original behavior)
+            if event.type == .flagsChanged {
+                let keyPressed = event.modifierFlags.contains(hotkeyKey.modifierFlag)
+                processKeyState(pressed: keyPressed)
+            }
+        }
+    }
 
+    /// Processes a key press/release event through the state machine.
+    /// Hold = push-to-talk dictation. Release = stop.
+    func processKeyState(pressed: Bool) {
         switch hotkeyState {
         case .idle:
-            if keyPressed {
-                // Modifier key down while idle → start capture, enter undecided state
-                fnPressTimestamp = Date()
-                hotkeyState = .activeUndecided
-                Task { await onStartBoth?() }
+            if pressed {
+                hotkeyState = .held
+                Task { await onStartDictation?() }
             }
 
-        case .activeUndecided:
-            if !keyPressed {
-                // Modifier key released — check hold duration
-                let holdDuration = Date().timeIntervalSince(fnPressTimestamp ?? Date())
-                fnPressTimestamp = nil
-
-                if holdDuration >= holdThreshold {
-                    // Long hold → push-to-talk, stop capture
-                    hotkeyState = .idle
-                    Task { await onStopCapture?() }
-                } else {
-                    // Short tap → toggle mode with speaker labels
-                    hotkeyState = .toggleActive
-                    onEnableSpeakerLabels?()
-                }
-            }
-
-        case .toggleActive:
-            if keyPressed {
-                // Modifier key pressed again while toggle-active → stop capture
+        case .held:
+            if !pressed {
                 hotkeyState = .idle
-                Task { await onStopCapture?() }
+                Task { await onStopDictation?() }
             }
         }
     }
@@ -166,7 +172,26 @@ final class GlobalHotkeyService: ObservableObject {
 
     func resetToIdle() {
         hotkeyState = .idle
-        fnPressTimestamp = nil
+    }
+
+    // MARK: - Key display names
+
+    /// Human-readable name for a virtual key code.
+    static func displayName(forKeyCode keyCode: UInt16) -> String {
+        let map: [UInt16: String] = [
+            0: "A", 1: "S", 2: "D", 3: "F", 4: "H", 5: "G", 6: "Z", 7: "X",
+            8: "C", 9: "V", 11: "B", 12: "Q", 13: "W", 14: "E", 15: "R",
+            16: "Y", 17: "T", 18: "1", 19: "2", 20: "3", 21: "4", 22: "6",
+            23: "5", 24: "=", 25: "9", 26: "7", 27: "-", 28: "8", 29: "0",
+            30: "]", 31: "O", 32: "U", 33: "[", 34: "I", 35: "P", 37: "L",
+            38: "J", 39: "'", 40: "K", 41: ";", 42: "\\", 43: ",", 44: "/",
+            45: "N", 46: "M", 47: ".", 49: "Space", 50: "`",
+            122: "F1", 120: "F2", 99: "F3", 118: "F4", 96: "F5", 97: "F6",
+            98: "F7", 100: "F8", 101: "F9", 109: "F10", 103: "F11", 111: "F12",
+            36: "Return", 48: "Tab", 51: "Delete", 53: "Escape",
+            123: "←", 124: "→", 125: "↓", 126: "↑",
+        ]
+        return map[keyCode] ?? "Key \(keyCode)"
     }
 
     // No deinit needed — this service lives for the app's lifetime.

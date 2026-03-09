@@ -15,12 +15,13 @@ struct MenuBarContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // ── Diktieren (≡ modifier hold) ──
+            // ── Diktieren (≡ hotkey hold, push-to-talk) ──
             MenuRow(
                 title: isDictating
                     ? String(localized: "Stop Dictation", bundle: .main)
                     : String(localized: "Dictation", bundle: .main),
-                shortcut: "\(appState.hotkeyKey.displayName) HOLD",
+                icon: "mic.fill",
+                shortcut: "\(appState.hotkeyDisplayName) \(String(localized: "HOLD", bundle: .main))",
                 isDisabled: isTranscribing
             ) {
                 dismissPopover()
@@ -28,17 +29,17 @@ struct MenuBarContentView: View {
                     if isDictating {
                         await appState.stopCapture()
                     } else if !appState.isCapturing {
-                        await appState.startBoth()
+                        await appState.startDictating()
                     }
                 }
             }
 
-            // ── Transkript (≡ modifier tap/toggle) ──
+            // ── Transkript (nur über Menü) ──
             MenuRow(
                 title: isTranscribing
                     ? String(localized: "Stop Transcript", bundle: .main)
                     : String(localized: "Start Transcript", bundle: .main),
-                shortcut: "\(appState.hotkeyKey.displayName) PRESS",
+                icon: "waveform",
                 isDisabled: isDictating
             ) {
                 dismissPopover()
@@ -50,6 +51,22 @@ struct MenuBarContentView: View {
                         appState.labelSources = true
                     }
                 }
+            }
+
+            Divider()
+                .padding(.vertical, 4)
+
+            // ── Sprache ──
+            LanguagePickerRow()
+                .environmentObject(appState)
+
+            // ── Transkript-Ordner öffnen ──
+            MenuRow(
+                title: String(localized: "Open Transcripts Folder", bundle: .main),
+                icon: "folder"
+            ) {
+                appState.openTranscriptsFolder()
+                dismissPopover()
             }
 
             Divider()
@@ -119,6 +136,34 @@ private struct MenuRow: View {
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.35 : 1)
         .onHover { isHovered = $0 }
+        .padding(.horizontal, 5)
+    }
+}
+
+// MARK: - LanguagePickerRow
+
+private struct LanguagePickerRow: View {
+    @EnvironmentObject var appState: AppState
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Image(systemName: "globe")
+                .frame(width: 20)
+
+            Picker(selection: $appState.selectedLocaleIdentifier) {
+                ForEach(appState.supportedLocales, id: \.identifier) { locale in
+                    Text(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier)
+                        .tag(locale.identifier)
+                }
+            } label: {
+                EmptyView()
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 2)
         .padding(.horizontal, 5)
     }
 }

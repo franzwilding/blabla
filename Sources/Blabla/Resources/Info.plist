@@ -9,7 +9,7 @@
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<string>com.blabla.app</string>
 	<key>CFBundleName</key>
 	<string>Blabla</string>
 	<key>CFBundlePackageType</key>
@@ -30,7 +30,7 @@
 	<string>Blabla uses the microphone to transcribe your speech in real time.</string>
 	<key>NSRequiresAquaSystemAppearance</key>
 	<false/>
-	<key>NSScreenCaptureDescription</key>
+	<key>NSAudioCaptureUsageDescription</key>
 	<string>Blabla captures system audio to transcribe what you hear in real time.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Blabla uses on-device speech recognition to transcribe audio.</string>

@@ -1,6 +1,4 @@
 // DictateService — transcribes live microphone input via AVAudioEngine + SpeechAnalyzer.
-// The MicCapture class below mirrors yap's MicrophoneCapture in Dictate.swift,
-// adapted for use as a library service rather than a CLI command.
 
 @preconcurrency import AVFoundation
 import Combine
@@ -16,9 +14,15 @@ final class DictateService: ObservableObject {
 
     @Published var state: State = .idle
     @Published var liveFragment: String = ""
+    @Published var liveSegments: [OutputFormat.Segment] = []
 
     /// Called with the raw source-format PCM buffer for each mic chunk (before conversion).
-    var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
+    /// Can be set after `start()` — MicCapture reads it dynamically via the shared box.
+    var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)? {
+        get { audioCallbackBox.callback }
+        set { audioCallbackBox.callback = newValue }
+    }
+    private let audioCallbackBox = SendableCallbackBox()
 
     private var micCapture: MicCapture?
     private var analyzer: SpeechAnalyzer?
@@ -75,9 +79,9 @@ final class DictateService: ObservableObject {
 
         let (inputSeq, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
 
-        // Set up microphone capture (mirrors yap's MicrophoneCapture)
+        // Set up microphone capture
         let capture = try MicCapture(targetFormat: targetFormat, continuation: continuation)
-        capture.onSourceBuffer = self.onAudioBuffer
+        capture.audioCallbackBox = self.audioCallbackBox
         micCapture = capture
         try capture.start()
 
@@ -88,7 +92,7 @@ final class DictateService: ObservableObject {
         state       = .running
 
         resultsTask = Task { [weak self] in
-            var segments: [(start: CMTime, text: String)] = []
+            var segments: [(range: CMTimeRange, text: String)] = []
 
             do {
                 guard let transcriber = self?.transcriber else { return }
@@ -96,17 +100,19 @@ final class DictateService: ObservableObject {
                     let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { continue }
 
-                    let start = result.range.start
-                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.start, start) == 0 }) {
+                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.range.start, result.range.start) == 0 }) {
                         segments[idx].text = text
+                        segments[idx].range = result.range
                     } else {
-                        segments.append((start, text))
+                        segments.append((result.range, text))
                     }
 
                     let display = segments.map(\.text).joined(separator: " ")
+                    let segs = segments.map { OutputFormat.Segment(timeRange: $0.range, text: $0.text) }
                     await MainActor.run {
                         guard let self else { return }
                         self.liveFragment = display
+                        self.liveSegments = segs
                     }
                 }
             } catch {
@@ -114,6 +120,7 @@ final class DictateService: ObservableObject {
             }
             await MainActor.run {
                 self?.liveFragment = ""
+                self?.liveSegments = []
                 if self?.state == .stopping { self?.state = .idle }
             }
         }
@@ -137,14 +144,13 @@ final class DictateService: ObservableObject {
 }
 
 // MARK: - MicCapture
-// Mirrors yap's MicrophoneCapture — taps the AVAudioEngine input node and
-// converts buffers to the SpeechAnalyzer's expected format.
 
 private final class MicCapture: @unchecked Sendable {
     private let engine: AVAudioEngine
     private let continuation: AsyncStream<AnalyzerInput>.Continuation
     private let targetFormat: AVAudioFormat
-    var onSourceBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)?
+    /// Shared box so the callback can be set after capture has started.
+    var audioCallbackBox: SendableCallbackBox?
 
     init(targetFormat: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation) throws {
         self.targetFormat = targetFormat
@@ -168,7 +174,7 @@ private final class MicCapture: @unchecked Sendable {
     }
 
     private func handleBuffer(_ buffer: AVAudioPCMBuffer) {
-        onSourceBuffer?(buffer)
+        audioCallbackBox?.callback?(buffer)
         let sourceFormat = buffer.format
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else { return }
         let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate))
@@ -198,13 +204,13 @@ enum DictateError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .microphonePermissionDenied:
-            return "Microphone access denied. Enable it in System Settings → Privacy & Security → Microphone."
+            return String(localized: "Microphone access denied. Enable it in System Settings → Privacy & Security → Microphone.", bundle: .main)
         case .speechNotAvailable:
-            return "Speech transcription is not available on this device."
+            return String(localized: "Speech transcription is not available on this device.", bundle: .main)
         case .unsupportedLocale(let id):
-            return "Locale \"\(id)\" is not supported for transcription."
+            return String(localized: "Locale \"\(id)\" is not supported for transcription.", bundle: .main)
         case .noCompatibleAudioFormat:
-            return "No compatible audio format available for speech recognition."
+            return String(localized: "No compatible audio format available for speech recognition.", bundle: .main)
         }
     }
 }
