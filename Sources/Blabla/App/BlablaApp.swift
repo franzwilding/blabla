@@ -26,7 +26,7 @@ struct BlablaApp: App {
             } label: {
                 Text(isDictating
                      ? String(localized: "Stop Dictation", bundle: .main)
-                     : "\(String(localized: "Dictation", bundle: .main))  ⌨ \(appState.hotkeyDisplayName) \(String(localized: "Hold", bundle: .main))")
+                     : "\(String(localized: "Dictation", bundle: .main))  \(appState.hotkeyShortcut)")
             }
             .disabled(isTranscribing)
 
