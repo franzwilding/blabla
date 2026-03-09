@@ -13,17 +13,4 @@ struct TranscriptEntry: Identifiable, Codable, Sendable {
         self.text   = text
     }
 
-    var formattedDate: String {
-        let f = DateFormatter()
-        f.dateStyle = .short
-        f.timeStyle = .short
-        return f.string(from: date)
-    }
-
-    var preview: String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let limit = 120
-        guard trimmed.count > limit else { return trimmed }
-        return String(trimmed.prefix(limit)) + "…"
-    }
 }

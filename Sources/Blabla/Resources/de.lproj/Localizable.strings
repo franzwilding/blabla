@@ -36,51 +36,16 @@
 "Stop Dictation" = "Diktieren beenden";
 "Start Transcript" = "Transkript starten";
 "Stop Transcript" = "Transkript beenden";
-"Settings" = "Einstellungen";
 "Quit" = "Beenden";
 
-/* Live Capture */
-"System Audio" = "Systemaudio";
-"Both" = "Beide";
-"%@ Hold" = "%@ Halten";
-"%@ Toggle" = "%@ Umschalten";
-"Stop" = "Stopp";
-"Start" = "Start";
-"Select a mode and press Start" = "Wähle einen Modus und drücke Start";
-"Copy" = "Kopieren";
-"Clear" = "Löschen";
-"%lld chars" = "%lld Zeichen";
-
-/* Transcribe File */
-"Transcribing…" = "Transkribieren…";
-"Transcribe" = "Transkribieren";
-"Drop an audio or video file" = "Audio- oder Videodatei hierhin ziehen";
-"Choose File…" = "Datei auswählen…";
-"Choose audio or video file" = "Audio- oder Videodatei auswählen";
-
-/* History */
-"Search transcripts…" = "Transkripte durchsuchen…";
-"Delete" = "Löschen";
-"No transcripts yet" = "Noch keine Transkripte";
-"No results" = "Keine Ergebnisse";
-"%lld transcripts" = "%lld Transkripte";
-"Clear All" = "Alle löschen";
-
 /* Capture Mode Labels */
+"System Audio" = "Systemaudio";
 "Live" = "Live";
 "System Audio + Dictation" = "Systemaudio + Diktieren";
 
-/* Menu Bar Shortcuts */
-"HOLD" = "HALTEN";
-"PRESS" = "DRÜCKEN";
-
 /* Error Messages */
-"File not found: %@" = "Datei nicht gefunden: %@";
-"SpeechTranscriber is not available on this device." = "Die Spracherkennung ist auf diesem Gerät nicht verfügbar.";
-"Locale \"%@\" is not supported for speech transcription." = "Die Sprache \"%@\" wird für die Sprachtranskription nicht unterstützt.";
 "Speech transcription is not available on this device." = "Die Sprachtranskription ist auf diesem Gerät nicht verfügbar.";
 "Locale \"%@\" is not supported for transcription." = "Die Sprache \"%@\" wird für die Transkription nicht unterstützt.";
 "No compatible audio format available for speech recognition." = "Kein kompatibles Audioformat für die Spracherkennung verfügbar.";
 "System Audio permission required. Enable it in System Settings → Privacy & Security → System Audio Recording, then relaunch Blabla." = "Systemaudio-Berechtigung erforderlich. Aktiviere sie in Systemeinstellungen → Datenschutz & Sicherheit → Systemaudioaufnahme und starte Blabla neu.";
-"Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch Blabla." = "Bildschirmaufnahme-Berechtigung erforderlich. Aktiviere sie in Systemeinstellungen → Datenschutz & Sicherheit → Bildschirmaufnahme und starte Blabla neu.";
 "Microphone access denied. Enable it in System Settings → Privacy & Security → Microphone." = "Mikrofonzugriff verweigert. Aktiviere ihn in Systemeinstellungen → Datenschutz & Sicherheit → Mikrofon.";

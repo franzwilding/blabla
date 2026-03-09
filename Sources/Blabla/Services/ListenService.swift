@@ -357,7 +357,6 @@ enum ListenError: LocalizedError {
     case unsupportedLocale(String)
     case noCompatibleAudioFormat
     case audioTapCreationFailed
-    case screenRecordingPermissionDenied
 
     var errorDescription: String? {
         switch self {
@@ -369,8 +368,6 @@ enum ListenError: LocalizedError {
             return String(localized: "No compatible audio format available for speech recognition.", bundle: .main)
         case .audioTapCreationFailed:
             return String(localized: "System Audio permission required. Enable it in System Settings → Privacy & Security → System Audio Recording, then relaunch Blabla.", bundle: .main)
-        case .screenRecordingPermissionDenied:
-            return String(localized: "Screen Recording permission required. Enable it in System Settings → Privacy & Security → Screen Recording, then relaunch Blabla.", bundle: .main)
         }
     }
 }

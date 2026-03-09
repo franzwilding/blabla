@@ -1,7 +1,6 @@
 import AppKit
 import AVFoundation
 import CoreAudio
-import Speech
 import SwiftUI
 
 struct SettingsView: View {
