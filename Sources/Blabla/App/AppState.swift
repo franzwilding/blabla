@@ -72,7 +72,7 @@ final class AppState: ObservableObject {
         return name
     }
 
-    /// Compact symbol-style shortcut string for menu display (e.g. "🌐", "⌃D").
+    /// Compact symbol-style shortcut string for menu display (e.g. "Fn", "⌃D").
     var hotkeyShortcut: String {
         var s = hotkeyKey.symbol
         if let keyCode = hotkeyKeyCode {
@@ -131,7 +131,6 @@ final class AppState: ObservableObject {
     let listenService = ListenService()
     let dictateService = DictateService()
     let hotkeyService = GlobalHotkeyService()
-    let liveTextOverlay = LiveTextOverlayController()
     private var sessionRecorder: SessionRecorder?
     private var startTask: Task<Void, Never>?
 
@@ -165,7 +164,6 @@ final class AppState: ObservableObject {
         loadHistory()
         observeServices()
         setupHotkeyService()
-        liveTextOverlay.attach(to: self)
         Task { await loadSupportedLocales() }
     }
 
