@@ -236,6 +236,11 @@ final class AppState: ObservableObject {
         let wasDictating = !labelSources && (captureMode == .both || captureMode == .dictating)
         let wasTranscribing = labelSources
         let source = captureMode.label
+
+        // Capture text BEFORE stopping services — stop() clears liveFragment
+        // which triggers Combine to reset liveText to "".
+        let combinedText = liveText
+
         captureMode = .idle
         labelSources = false
         hotkeyService.resetToIdle()
@@ -246,9 +251,6 @@ final class AppState: ObservableObject {
         _ = await (l, d)
 
         let transcriptURL = stopSessionRecording()
-
-        // Archive AFTER services have produced all results
-        let combinedText = liveText
         if !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             archiveTranscript(combinedText, source: source)
 
