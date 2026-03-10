@@ -61,7 +61,9 @@ final class SessionRecorder: @unchecked Sendable {
                             settings: buffer.format.settings
                         )
                     }
-                    try systemAudioFile?.write(from: buffer)
+                    if buffer.format == systemAudioFile?.processingFormat {
+                        try systemAudioFile?.write(from: buffer)
+                    }
                 case .mic:
                     if micAudioFile == nil {
                         micAudioFile = try AVAudioFile(
@@ -69,7 +71,9 @@ final class SessionRecorder: @unchecked Sendable {
                             settings: buffer.format.settings
                         )
                     }
-                    try micAudioFile?.write(from: buffer)
+                    if buffer.format == micAudioFile?.processingFormat {
+                        try micAudioFile?.write(from: buffer)
+                    }
                 }
             } catch {
                 // Best-effort — dropping a buffer is acceptable

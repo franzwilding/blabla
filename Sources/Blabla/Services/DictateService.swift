@@ -16,6 +16,10 @@ final class DictateService: ObservableObject {
     @Published var liveFragment: String = ""
     @Published var liveSegments: [OutputFormat.Segment] = []
 
+    /// Final transcript captured before clearing liveFragment on stop.
+    /// Read this after `stop()` returns to get the complete dictated text.
+    var finalTranscript: String = ""
+
     /// Called with the raw source-format PCM buffer for each mic chunk (before conversion).
     /// Can be set after `start()` — MicCapture reads it dynamically via the shared box.
     var onAudioBuffer: (@Sendable (AVAudioPCMBuffer) -> Void)? {
@@ -119,6 +123,8 @@ final class DictateService: ObservableObject {
                 // Stream ended (normal on stop or error)
             }
             await MainActor.run {
+                // Save final text before clearing — stopCapture() reads this.
+                self?.finalTranscript = self?.liveFragment ?? ""
                 self?.liveFragment = ""
                 self?.liveSegments = []
                 if self?.state == .stopping { self?.state = .idle }
@@ -131,6 +137,8 @@ final class DictateService: ObservableObject {
     func stop() async throws {
         guard state == .running else { return }
         state = .stopping
+        // Brief delay so the speech recognizer can finish processing the last word
+        try? await Task.sleep(for: .milliseconds(300))
         micCapture?.stop()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
         // Wait for the results task to finish processing (don't cancel it)

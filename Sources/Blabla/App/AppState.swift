@@ -79,6 +79,7 @@ final class AppState: ObservableObject {
         }
         return s
     }
+
     @Published var dictationPunctuation: Bool {
         didSet { UserDefaults.standard.set(dictationPunctuation, forKey: "dictationPunctuation") }
     }
@@ -207,25 +208,26 @@ final class AppState: ObservableObject {
     }
 
     func stopCapture() async {
-        // Wait for any in-flight start to complete before stopping
+// Wait for any in-flight start to complete before stopping
         await startTask?.value
 
         let wasDictating = !labelSources && (captureMode == .both || captureMode == .dictating)
         let wasTranscribing = labelSources
         let source = captureMode.label
 
-        // Capture text BEFORE stopping services — stop() clears liveFragment
-        // which triggers Combine to reset liveText to "".
-        let combinedText = liveText
-
         captureMode = .idle
         labelSources = false
         hotkeyService.resetToIdle()
 
-        // Stop services — waits for all results to be fully processed
+        // Stop services — waits for all results to be fully processed.
+        // This ensures finalTranscript is populated with the complete text.
         async let l: () = (try? listenService.stop()) ?? ()
         async let d: () = (try? dictateService.stop()) ?? ()
         _ = await (l, d)
+
+        // Read final text AFTER stopping — stop() waits for all speech results
+        // and saves the complete transcript before clearing liveFragment.
+        let combinedText = dictateService.finalTranscript
 
         let transcriptURL = stopSessionRecording()
         if !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

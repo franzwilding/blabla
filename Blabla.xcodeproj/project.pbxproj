@@ -9,11 +9,8 @@
 /* Begin PBXBuildFile section */
 		09634F4F116903C171DBA153 /* TranscriptEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 553AA4A7CB3DD8BF72976FEF /* TranscriptEntry.swift */; };
 		0F290487C17D2C3129C09390 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD94356685AF5E859EB2304 /* SettingsView.swift */; };
-
 		2AC2E5624EFC7012B676DE01 /* MenuBarLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1447778D6B46F5E7732DA07C /* MenuBarLabel.swift */; };
-
 		2D449E293FBF9233752A3D3C /* AttributedString+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12BC50ED10C473BC7299F5E0 /* AttributedString+Extensions.swift */; };
-
 		4D987909F00200C6CE89E4AA /* DictateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97185647F8AF109174851762 /* DictateService.swift */; };
 		63A1365052F23775DF8289B6 /* SessionRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C895E882EB233A6B9147D7F2 /* SessionRecorder.swift */; };
 		660B62D5A9CD999CEEEDEBD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 52AA915DCF33DAC70EFEFEC8 /* Assets.xcassets */; };
@@ -23,18 +20,15 @@
 		A5231232A62F5D93671FBE8E /* ScreenCaptureKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7274C67C555F7CCC352FA68F /* ScreenCaptureKit.framework */; };
 		B653023D4542F24CFF663F36 /* ListenService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F028506E79B41309922294AF /* ListenService.swift */; };
 		B6C3EF57020030DB54CFDFCE /* OutputFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BDD2F56BFA7CA0BD289D8D7 /* OutputFormat.swift */; };
-
 		EF36C253336E6DF34590C04F /* BlablaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A5C6839D58416799037C8A /* BlablaApp.swift */; };
 		F9CEFD2B28E6340523A86456 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4943A853DE5CC23F3998FBEA /* AppState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-
 		0BDD2F56BFA7CA0BD289D8D7 /* OutputFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputFormat.swift; sourceTree = "<group>"; };
 		0DD94356685AF5E859EB2304 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		12BC50ED10C473BC7299F5E0 /* AttributedString+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AttributedString+Extensions.swift"; sourceTree = "<group>"; };
 		1447778D6B46F5E7732DA07C /* MenuBarLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarLabel.swift; sourceTree = "<group>"; };
-
 		282F2A831995926B063B78C9 /* Blabla.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Blabla.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4943A853DE5CC23F3998FBEA /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		52AA915DCF33DAC70EFEFEC8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -47,9 +41,7 @@
 		98F37E59FE71703CD379BB4B /* TranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionEngine.swift; sourceTree = "<group>"; };
 		B77BD5BB63F1D17576491BC9 /* GlobalHotkeyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyService.swift; sourceTree = "<group>"; };
 		C895E882EB233A6B9147D7F2 /* SessionRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRecorder.swift; sourceTree = "<group>"; };
-
 		F028506E79B41309922294AF /* ListenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListenService.swift; sourceTree = "<group>"; };
-
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -292,7 +284,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.blabla.app;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
@@ -378,7 +370,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.blabla.app;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
