@@ -62,30 +62,30 @@ struct HotkeyDisplayTests {
 
     // MARK: - displayName(forKeyCode:) static helper
 
-    @Test func keyCodeDisplayNameForLetters() {
+    @Test @MainActor func keyCodeDisplayNameForLetters() {
         // keyCode 0 = A, 2 = D
         #expect(GlobalHotkeyService.displayName(forKeyCode: 0) == "A")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 2) == "D")
     }
 
-    @Test func keyCodeDisplayNameForFunctionKeys() {
+    @Test @MainActor func keyCodeDisplayNameForFunctionKeys() {
         #expect(GlobalHotkeyService.displayName(forKeyCode: 122) == "F1")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 111) == "F12")
     }
 
-    @Test func keyCodeDisplayNameForArrows() {
+    @Test @MainActor func keyCodeDisplayNameForArrows() {
         #expect(GlobalHotkeyService.displayName(forKeyCode: 123) == "←")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 124) == "→")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 125) == "↓")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 126) == "↑")
     }
 
-    @Test func keyCodeDisplayNameForUnknownKeyCode() {
+    @Test @MainActor func keyCodeDisplayNameForUnknownKeyCode() {
         let name = GlobalHotkeyService.displayName(forKeyCode: 999)
         #expect(name.contains("999"), "Unknown key code should include the code number")
     }
 
-    @Test func keyCodeDisplayNameForSpecialKeys() {
+    @Test @MainActor func keyCodeDisplayNameForSpecialKeys() {
         #expect(GlobalHotkeyService.displayName(forKeyCode: 36) == "Return")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 48) == "Tab")
         #expect(GlobalHotkeyService.displayName(forKeyCode: 49) == "Space")

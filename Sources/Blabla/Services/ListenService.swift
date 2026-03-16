@@ -120,7 +120,13 @@ final class ListenService: ObservableObject {
                     let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { continue }
 
-                    if let idx = segments.firstIndex(where: { CMTimeCompare($0.range.start, result.range.start) == 0 }) {
+                    let resultStart = result.range.start.seconds
+                    let resultEnd   = resultStart + result.range.duration.seconds
+                    if let idx = segments.lastIndex(where: {
+                        let segStart = $0.range.start.seconds
+                        let segEnd   = segStart + $0.range.duration.seconds
+                        return segStart < resultEnd && resultStart < segEnd
+                    }) {
                         segments[idx].text = text
                         segments[idx].range = result.range
                     } else {
