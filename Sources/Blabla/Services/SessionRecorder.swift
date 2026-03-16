@@ -61,8 +61,11 @@ final class SessionRecorder: @unchecked Sendable {
                             settings: buffer.format.settings
                         )
                     }
-                    if buffer.format == systemAudioFile?.processingFormat {
-                        try systemAudioFile?.write(from: buffer)
+                    if let file = systemAudioFile {
+                        let buf = buffer.format == file.processingFormat
+                            ? buffer
+                            : SessionRecorder.convert(buffer, to: file.processingFormat)
+                        if let buf { try file.write(from: buf) }
                     }
                 case .mic:
                     if micAudioFile == nil {
@@ -71,14 +74,36 @@ final class SessionRecorder: @unchecked Sendable {
                             settings: buffer.format.settings
                         )
                     }
-                    if buffer.format == micAudioFile?.processingFormat {
-                        try micAudioFile?.write(from: buffer)
+                    if let file = micAudioFile {
+                        let buf = buffer.format == file.processingFormat
+                            ? buffer
+                            : SessionRecorder.convert(buffer, to: file.processingFormat)
+                        if let buf { try file.write(from: buf) }
                     }
                 }
             } catch {
                 // Best-effort — dropping a buffer is acceptable
             }
         }
+    }
+
+    // MARK: - Format conversion
+
+    /// Converts a PCM buffer to the target format. Returns nil if conversion is not possible.
+    private static func convert(_ buffer: AVAudioPCMBuffer, to format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        guard let converter = AVAudioConverter(from: buffer.format, to: format) else { return nil }
+        let ratio = format.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * ratio))
+        guard capacity > 0, let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return nil }
+        var err: NSError?
+        nonisolated(unsafe) var consumed = false
+        nonisolated(unsafe) let input = buffer
+        converter.convert(to: output, error: &err) { _, status in
+            if consumed { status.pointee = .noDataNow; return nil }
+            consumed = true; status.pointee = .haveData; return input
+        }
+        guard err == nil, output.frameLength > 0 else { return nil }
+        return output
     }
 
     // MARK: - Folder creation

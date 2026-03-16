@@ -32,6 +32,7 @@ final class ListenService: ObservableObject {
     private var inputContinuation: AsyncStream<AnalyzerInput>.Continuation?
     private var resultsTask: Task<Void, Never>?
     private var audioTap: SystemAudioTap?
+    private var deviceChangeContext: Unmanaged<DeviceChangeContext>?
 
     // MARK: - Start
 
@@ -102,6 +103,7 @@ final class ListenService: ObservableObject {
         }
 
         audioTap = tap
+        startDeviceChangeMonitoring(targetFormat: targetFormat)
 
         let speechAnalyzer = SpeechAnalyzer(modules: modules)
         try await speechAnalyzer.start(inputSequence: inputSeq)
@@ -144,11 +146,69 @@ final class ListenService: ObservableObject {
         }
     }
 
+    // MARK: - Device change monitoring
+
+    /// Watches for default output device changes (e.g. AirPods switching A2DP ↔ HFP)
+    /// and replaces the audio tap so system audio capture keeps working.
+    private func startDeviceChangeMonitoring(targetFormat: AVAudioFormat) {
+        stopDeviceChangeMonitoring()
+        let ctx = DeviceChangeContext { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.state == .running else { return }
+                // Debounce: wait for the device to settle before restarting the tap
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                self.restartAudioTap(targetFormat: targetFormat)
+            }
+        }
+        let retained = Unmanaged.passRetained(ctx)
+        deviceChangeContext = retained
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        AudioObjectAddPropertyListener(
+            AudioObjectID(kAudioObjectSystemObject), &address,
+            defaultOutputDeviceChangedProc, retained.toOpaque()
+        )
+    }
+
+    private func stopDeviceChangeMonitoring() {
+        guard let retained = deviceChangeContext else { return }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        AudioObjectRemovePropertyListener(
+            AudioObjectID(kAudioObjectSystemObject), &address,
+            defaultOutputDeviceChangedProc, retained.toOpaque()
+        )
+        retained.release()
+        deviceChangeContext = nil
+    }
+
+    @MainActor
+    private func restartAudioTap(targetFormat: AVAudioFormat) {
+        guard state == .running, let continuation = inputContinuation else { return }
+        audioTap?.stop()
+        audioTap = nil
+        guard let tap = try? SystemAudioTap(targetFormat: targetFormat) else { return }
+        let callbackBox = self.audioCallbackBox
+        tap.onBuffer = { buffer, converted in
+            callbackBox.callback?(buffer)
+            continuation.yield(AnalyzerInput(buffer: converted))
+        }
+        guard (try? tap.start()) != nil else { return }
+        audioTap = tap
+    }
+
     // MARK: - Stop
 
     func stop() async throws {
         guard state == .running else { return }
         state = .stopping
+        stopDeviceChangeMonitoring()
         audioTap?.stop()
         inputContinuation?.finish()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
@@ -340,6 +400,26 @@ private func systemAudioIOProc(
         ctx.onBuffer?(source, converted)
     }
 
+    return noErr
+}
+
+// MARK: - Device change context + C callback
+
+/// Carries the Swift closure across the C boundary for the property listener.
+private final class DeviceChangeContext {
+    let onChanged: () -> Void
+    init(_ onChanged: @escaping () -> Void) { self.onChanged = onChanged }
+}
+
+/// C-compatible property listener callback for kAudioHardwarePropertyDefaultOutputDevice.
+private func defaultOutputDeviceChangedProc(
+    _: AudioObjectID,
+    _: UInt32,
+    _: UnsafePointer<AudioObjectPropertyAddress>,
+    clientData: UnsafeMutableRawPointer?
+) -> OSStatus {
+    guard let clientData else { return noErr }
+    Unmanaged<DeviceChangeContext>.fromOpaque(clientData).takeUnretainedValue().onChanged()
     return noErr
 }
 
